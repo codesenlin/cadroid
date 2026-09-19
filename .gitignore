@@ -1,9 +1,25 @@
-/app/build
-/app/src/main/assets/script.js
-/app/release
-/app/signatures
-/app/src/test
-/.gradle
+# ===== 构建产物 =====
+build/
+captures/
+.gradle/
+*.apk
+*.ap_
+*.class
+*.dex
+
+# ===== IDE 和本机配置 =====
+.idea/
+*.iml
+local.properties
+
+# ===== 签名相关 =====
+*.keystore
+*.jks
+*.signature
+*.password
+*.p12
+*.pk8
+*.x509.pem
+
+# ===== 项目特有的敏感文件 =====
 /export.bat
-/app/src/main/java/com/xero/ca/Secret.java
-/build/
