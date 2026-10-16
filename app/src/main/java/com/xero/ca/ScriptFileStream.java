@@ -2,8 +2,10 @@ package com.xero.ca;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
+import android.content.pm.SigningInfo;
 import android.os.Build;
 import android.support.annotation.NonNull;
 
@@ -34,17 +36,128 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
 public class ScriptFileStream extends GZIPInputStream {
+    /** 重新打开待解密数据流的工厂：挑选密钥时需要对同一个脚本多试几次，每次都要新的流 */
+    public interface StreamFactory {
+        InputStream open() throws IOException;
+    }
+
     public ScriptFileStream(Context cx, InputStream stream) throws IOException {
-        super(new EncryptedInputStream(cx, stream));
+        this(getKeyCandidates(cx).get(0), stream);
+    }
+
+    private ScriptFileStream(byte[] key, InputStream stream) throws IOException {
+        super(new EncryptedInputStream(key, stream));
     }
 
     public static InputStream fromAsset(Context cx, String fileName) throws IOException {
-        return new ScriptFileStream(cx, cx.getAssets().open(fileName));
+        return openWithKeyRotation(cx, () -> cx.getAssets().open(fileName));
     }
 
     public static InputStream fromFile(Context cx, String sourceFile, String signFile, byte[] verify, int versionCode) throws IOException {
         verifyFile(sourceFile, signFile, verify, versionCode);
-        return new ScriptFileStream(cx, new FileInputStream(sourceFile));
+        return openWithKeyRotation(cx, () -> new FileInputStream(sourceFile));
+    }
+
+    /**
+     * 逐个候选密钥尝试解密，第一个能通过 GZIP 头校验的即为正确密钥。
+     *
+     * 为什么不能只用一张证书：APK 一旦用上 v3 签名密钥轮换
+     * （proof-of-rotation，或 Android 13+ 的 v3.1 rotation targeting），
+     * 不同 Android 版本从 PackageManager 读到的证书就不再相同：
+     *   - v3.1 只对 T+ 轮换时：T+ 上是新证书，旧系统上仍是原证书，两者都要能解开同一份脚本；
+     *   - 轮换后 v1(JAR)/v2 仍由最初那把密钥签（API 28 以下只认它），v3 用的是新密钥；
+     *   - 多签名 APK 的历史格式是「所有证书首尾相接」当密钥。
+     * 而 assets/script.js 只能按其中一张证书异或加密，所以这里挨个试。
+     */
+    private static InputStream openWithKeyRotation(Context cx, StreamFactory factory) throws IOException {
+        IOException last = null;
+        for (byte[] key : getKeyCandidates(cx)) {
+            InputStream stream = factory.open(); // 打不开（如文件不存在）与密钥无关，直接抛出
+            try {
+                return new ScriptFileStream(key, stream);
+            } catch (IOException e) {
+                last = e;
+                try {
+                    stream.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+        throw last != null ? last : new IOException("No available signature key");
+    }
+
+    /**
+     * 按优先级列出候选密钥：
+     * 1. 当前签名证书全部拼接（历史行为，兼容已有脚本）
+     * 2. 当前签名证书逐个
+     * 3. v3 轮换历史里的证书（旧证书）
+     * 4. v1(JAR) 签名证书（API 28 以下唯一来源；轮换后仍是最初那把密钥）
+     * 5. 空密钥（脚本未异或，或完全取不到签名信息）
+     */
+    // GET_SIGNING_CERTIFICATES / SigningInfo 是 API 28 起，下面已用 SDK_INT 判断保护
+    @SuppressLint("NewApi")
+    private static List<byte[]> getKeyCandidates(Context cx) {
+        List<byte[]> current = new ArrayList<>();
+        List<byte[]> history = new ArrayList<>();
+        List<byte[]> legacy = new ArrayList<>();
+        try {
+            PackageManager pm = cx.getPackageManager();
+            String pkg = cx.getPackageName();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageInfo info = pm.getPackageInfo(pkg, PackageManager.GET_SIGNING_CERTIFICATES);
+                SigningInfo signingInfo = info == null ? null : info.signingInfo;
+                if (signingInfo != null) {
+                    addSignatures(current, signingInfo.getApkContentsSigners());
+                    addSignatures(history, signingInfo.getSigningCertificateHistory());
+                }
+            }
+            PackageInfo legacyInfo = pm.getPackageInfo(pkg, PackageManager.GET_SIGNATURES);
+            if (legacyInfo != null) addSignatures(legacy, legacyInfo.signatures);
+        } catch (Exception e) {
+            // 取不到签名信息时退化为不异或
+        }
+        List<byte[]> keys = new ArrayList<>();
+        byte[] concatenated = concat(current);
+        if (concatenated != null) keys.add(concatenated);
+        addKeys(keys, current);
+        addKeys(keys, history);
+        addKeys(keys, legacy);
+        keys.add(new byte[]{0});
+        return keys;
+    }
+
+    private static void addSignatures(List<byte[]> out, Signature[] signatures) {
+        if (signatures == null) return;
+        for (Signature signature : signatures) {
+            if (signature != null) out.add(signature.toByteArray());
+        }
+    }
+
+    private static void addKeys(List<byte[]> out, List<byte[]> candidates) {
+        for (byte[] key : candidates) {
+            if (key == null || key.length == 0) continue;
+            boolean exists = false;
+            for (byte[] added : out) {
+                if (Arrays.equals(added, key)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) out.add(key);
+        }
+    }
+
+    private static byte[] concat(List<byte[]> list) {
+        int size = 0;
+        for (byte[] bytes : list) size += bytes.length;
+        if (size == 0) return null;
+        byte[] result = new byte[size];
+        size = 0;
+        for (byte[] bytes : list) {
+            System.arraycopy(bytes, 0, result, size, bytes.length);
+            size += bytes.length;
+        }
+        return result;
     }
 
     public static byte[] getStringHash(String string) {
@@ -76,17 +189,17 @@ public class ScriptFileStream extends GZIPInputStream {
         Inflater inflater = new Inflater(true);
         ByteArrayInputStream bis = new ByteArrayInputStream(iCode);
         InflaterInputStream iis = new InflaterInputStream(bis, inflater);
-        ICodeInputStream icis = new ICodeInputStream(iis);
-        return icis.readScript(hash);
+        ICodeInputStream ices = new ICodeInputStream(iis);
+        return ices.readScript(hash);
     }
 
     public static byte[] writeICode(Object script, byte[] hash) throws IOException {
         Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION, true);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DeflaterOutputStream dos = new DeflaterOutputStream(bos, deflater);
-        ICodeOutputStream icos = new ICodeOutputStream(dos);
-        icos.writeScript(hash, script);
-        icos.close();
+        ICodeOutputStream icons = new ICodeOutputStream(dos);
+        icons.writeScript(hash, script);
+        icons.close();
         return bos.toByteArray();
     }
 
@@ -136,38 +249,12 @@ public class ScriptFileStream extends GZIPInputStream {
 
     private static class EncryptedInputStream extends FilterInputStream {
         private int mReadBytes, mMark;
-        private byte[] mKeys = new byte[]{0};
+        private byte[] mKeys;
 
-        @SuppressLint("WrongConstant")
-        @SuppressWarnings("NewApi")
-        private EncryptedInputStream(Context cx, InputStream stream) {
+        private EncryptedInputStream(byte[] keys, InputStream stream) {
             super(stream);
             mReadBytes = 0;
-            try {
-                List<byte[]> lb = new ArrayList<>();
-                int size = 0;
-                byte[] t;
-                Signature[] signatures;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    signatures = cx.getPackageManager().getPackageInfo(cx.getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES).signingInfo.getApkContentsSigners();
-                } else {
-                    signatures = cx.getPackageManager().getPackageInfo(cx.getPackageName(), PackageManager.GET_SIGNATURES).signatures;
-                }
-                for (Signature e : signatures) {
-                    t = e.toByteArray();
-                    size += t.length;
-                    lb.add(t);
-                }
-                mKeys = new byte[size];
-                size = 0;
-                for (byte[] be : lb) {
-                    System.arraycopy(be, 0, mKeys, size, be.length);
-                    size += be.length;
-                }
-            } catch (Exception e) {
-                //do nothing
-            }
-            if (mKeys.length == 0) mKeys = new byte[]{0};
+            mKeys = (keys == null || keys.length == 0) ? new byte[]{0} : keys;
             mMark = -1;
         }
 
