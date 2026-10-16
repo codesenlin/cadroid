@@ -9,6 +9,18 @@ apply plugin: 'com.android.application'
 def caKeystore = file('signatures/release.keystore')
 def caPasswordFile = file('signatures/release.password')
 
+// 账号/密钥类值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth、反馈 token）
+// 一律从 local.properties 读取，仓库里的 Secret.java 直接取 BuildConfig，
+// 默认留空 → 对应功能自动关闭。键名见 README「本地依赖与本机密钥」。
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def secretValue = { String name ->
+    '"' + ((localProps.getProperty(name) ?: '').replace('\\', '\\\\').replace('"', '\\"')) + '"'
+}
+
 android {
     namespace 'com.xero.ca'
     compileSdk 33
@@ -37,6 +49,13 @@ android {
         versionCode 20741
         versionName "1.2.14"
         buildConfigField "int", "SHELL_VERSION", "26"
+        // 下列值来自 local.properties（缺省为空，功能自动关闭），Secret.java 直接读取
+        buildConfigField "String", "SECRET_TD_TOKEN", secretValue('ca.tdToken')
+        buildConfigField "String", "SECRET_GDT_APP_ID", secretValue('ca.gdtAppId')
+        buildConfigField "String", "SECRET_GDT_POS_ID", secretValue('ca.gdtPosId')
+        buildConfigField "String", "SECRET_GITEE_CLIENT_ID", secretValue('ca.giteeClientId')
+        buildConfigField "String", "SECRET_GITEE_CLIENT_SECRET", secretValue('ca.giteeClientSecret')
+        buildConfigField "String", "SECRET_GITEE_FEEDBACK_TOKEN", secretValue('ca.giteeFeedbackToken')
         multiDexEnabled true
     }
     buildTypes {
@@ -59,6 +78,15 @@ android {
         }
     }
     buildToolsVersion '34.0.0'
+    sourceSets {
+        main {
+            // 本地没有 TalkingData jar 时，用 app/src/stub/java 里的空实现编译，
+            // 保证 clone 下来没有任何本地依赖也能直接构建（统计功能等于关闭）
+            if (!file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()) {
+                java.srcDir 'src/stub/java'
+            }
+        }
+    }
     buildFeatures {
         viewBinding false
         buildConfig true
@@ -75,6 +103,7 @@ dependencies {
     if (file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()) {
         implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar')
     }
+    // 上面的 jar 缺失时，改用 app/src/stub/java 里的空实现（见 sourceSets）
     // 本地依赖不入库（见 app/libs/.gitignore），缺失时跳过，转化SDK 不参与也不影响广告
     if (file('libs/GDTActionSDK.min.1.9.8.aar').exists()) {
         implementation files('libs/GDTActionSDK.min.1.9.8.aar')
