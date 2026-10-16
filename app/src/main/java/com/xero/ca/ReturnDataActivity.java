@@ -3,7 +3,6 @@ package com.xero.ca;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 
 public class ReturnDataActivity extends Activity {
@@ -16,26 +15,22 @@ public class ReturnDataActivity extends Activity {
         Intent lastIntent = getIntent();
         if (lastIntent != null) {
             Intent intent = null;
-            int requrestCode = 0;
+            int requestCode = 0;
             try {
                 intent = lastIntent.getParcelableExtra(EXTRA_INTENT);
-                requrestCode = lastIntent.getIntExtra(EXTRA_REQUEST_CODE,0);
+                requestCode = lastIntent.getIntExtra(EXTRA_REQUEST_CODE,0);
             } catch (ClassCastException e) {
                 //Ignore this exception
             }
             if (intent != null) {
-                startActivityForResult(intent, requrestCode);
+                startActivityForResult(intent, requestCode);
             }
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask();
-        } else {
-            finish();
-        }
+        finishAndRemoveTask();
         ScriptInterface.onActivityResult(requestCode, resultCode, data);
     }
 

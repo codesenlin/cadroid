@@ -30,18 +30,18 @@ public class RhinoWebView extends WebView {
 
     public RhinoWebView setDelegee(Delegee delegee) {
         if (delegee == null) throw new IllegalArgumentException();
-        setWebChromeClient(new ChromeClientDelegetor(this, delegee));
+        setWebChromeClient(new ChromeClientDelegator(this, delegee));
         setWebViewClient(new WebViewClientDelegator(this, delegee));
         IDelegator iDelegator = new IDelegator(this, delegee);
         setDownloadListener(iDelegator);
         return this;
     }
 
-    public static class ChromeClientDelegetor extends WebChromeClient {
-        Delegee delegee;
-        WebView parent;
+    public static class ChromeClientDelegator extends WebChromeClient {
+        final Delegee delegee;
+        final WebView parent;
 
-        public ChromeClientDelegetor(WebView parent, Delegee delegee) {
+        public ChromeClientDelegator(WebView parent, Delegee delegee) {
             this.parent = parent;
             this.delegee = delegee;
         }
@@ -113,8 +113,8 @@ public class RhinoWebView extends WebView {
     }
 
     public static class WebViewClientDelegator extends WebViewClient {
-        Delegee delegee;
-        WebView parent;
+        final Delegee delegee;
+        final WebView parent;
 
         public WebViewClientDelegator(WebView parent, Delegee delegee) {
             this.parent = parent;
@@ -138,8 +138,8 @@ public class RhinoWebView extends WebView {
     }
 
     public static class IDelegator implements DownloadListener {
-        Delegee delegee;
-        WebView parent;
+        final Delegee delegee;
+        final WebView parent;
 
         public IDelegator(WebView parent, Delegee delegee) {
             this.parent = parent;

@@ -1,6 +1,5 @@
 package com.xero.ca;
 
-import android.annotation.TargetApi;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
@@ -8,13 +7,14 @@ import android.os.SystemClock;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import com.xero.ca.script.ScriptObject;
 
 import java.lang.ref.WeakReference;
 
-@TargetApi(Build.VERSION_CODES.N)
+@RequiresApi(Build.VERSION_CODES.N)
 public class ScriptTileService extends TileService {
     private static WeakReference<ScriptTileService> sInstance = null;
     private static TileListener sListener;
@@ -79,7 +79,7 @@ public class ScriptTileService extends TileService {
     }
 
     private void postCommand(int type) {
-        Log.d("CA","Post Command:" + type + " sPending=" + sPending);
+        Log.d("CA","Post Command:" + type + " spending=" + sPending);
         if (mHandler != null && !sPending) {
             sPending = true;
             mHandler.post(new UpdateTileCommand(type));
@@ -107,8 +107,8 @@ public class ScriptTileService extends TileService {
         static final int TYPE_UPDATE = 0;
         static final int TYPE_CLICK = 1;
 
-        private int mType;
-        private TileConfig mConfig;
+        private final int mType;
+        private final TileConfig mConfig;
 
         UpdateTileCommand(int type) {
             mType = type;

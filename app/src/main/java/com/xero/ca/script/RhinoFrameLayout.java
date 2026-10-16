@@ -1,9 +1,7 @@
 package com.xero.ca.script;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Outline;
-import android.os.Build;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -74,7 +72,6 @@ public class RhinoFrameLayout extends FrameLayout {
     }
 
     public void setRoundRectRadius(int radius, int direction) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return;
         if (radius <= 0) {
             setClipToOutline(false);
         } else {
@@ -83,10 +80,9 @@ public class RhinoFrameLayout extends FrameLayout {
         }
     }
 
-    @TargetApi(21)
 	private static class RadiusProvider extends ViewOutlineProvider {
-        float radius;
-        int direction;
+        final float radius;
+        final int direction;
 
         public RadiusProvider(float radius, int direction) {
             this.radius = radius;

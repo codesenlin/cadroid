@@ -36,15 +36,15 @@ public class ScriptInterface {
     public static final String ACTION_URI_ACTION = "com.xero.ca.ACTION_URI_ACTION";
     public static final String ACTION_DEBUG_EXEC = "com.xero.ca.DEBUG_EXEC";
 
-    private ScriptManager mManager;
-	private Context mContext;
+    private final ScriptManager mManager;
+	private final Context mContext;
 	private SplashActivity mBindActivity;
 	private ScriptService mBindService;
-	private Thread mUiThread;
-	private Handler mUiHandler;
-	private Preference mPreference;
+	private final Thread mUiThread;
+	private final Handler mUiHandler;
+	private final Preference mPreference;
     private Bridge mBridge;
-    private CallbackProxy mCallbackProxy;
+    private final CallbackProxy mCallbackProxy;
     private boolean mOnlineMode = false;
     private String mOfflineReason = null;
 
@@ -207,11 +207,7 @@ public class ScriptInterface {
             mBindService.stopSelf();
         }
         if (mBindActivity != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                mBindActivity.finishAndRemoveTask();
-            } else {
-                mBindActivity.finish();
-            }
+            mBindActivity.finishAndRemoveTask();
         }
     }
 

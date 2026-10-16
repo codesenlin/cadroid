@@ -248,7 +248,7 @@ public class ScriptManager {
     }
 
     class PrepareCommand implements Runnable {
-        private boolean runAfterPrepared;
+        private final boolean runAfterPrepared;
 
         PrepareCommand(boolean runAfterPrepared) {
             this.runAfterPrepared = runAfterPrepared;
@@ -294,7 +294,7 @@ public class ScriptManager {
     }
 
     class ExitCommand implements Runnable {
-        boolean callUnload;
+        final boolean callUnload;
 
         ExitCommand(boolean callUnload) {
             this.callUnload = callUnload;
@@ -317,10 +317,10 @@ public class ScriptManager {
             this.versionCode = versionCode;
         }
 
-        private String coreFile;
-        private String signFile;
-        private byte[] verify;
-        private int versionCode;
+        private final String coreFile;
+        private final String signFile;
+        private final byte[] verify;
+        private final int versionCode;
 
         InputStream getInputStream() throws IOException {
             return ScriptFileStream.fromFile(bindContext, coreFile, signFile, verify, versionCode);

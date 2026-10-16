@@ -17,8 +17,8 @@ public class RhinoWebSocketClientHelper extends WebSocketClient {
     }
 
     @Override
-    public void onOpen(ServerHandshake handshakedata) {
-        delegate.onOpen(this, handshakedata);
+    public void onOpen(ServerHandshake handshake) {
+        delegate.onOpen(this, handshake);
     }
 
     @Override

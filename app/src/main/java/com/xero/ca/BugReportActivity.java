@@ -30,10 +30,11 @@ public class BugReportActivity extends Activity {
                         finish();
                     })
                     .setNegativeButton("忽略", (dia, w) -> finish());
-            if (epid != 0) {
+            final int epic = ex.getInt("pid", 0);
+            if (epic != 0) {
                 builder.setNeutralButton("立即停止", (dia, w) -> {
                     finish();
-                    android.os.Process.killProcess(epid);
+                    android.os.Process.killProcess(epic);
                     System.exit(0);
                 });
             }

@@ -16,14 +16,14 @@ import com.xero.ca.script.ScriptObject;
 
 @ScriptObject
 public class MCAdapter implements ServiceConnection, Handler.Callback {
-    private Context mContext;
-    private Handler mHandler;
-    private String clientName;
-    private int version;
+    private final Context mContext;
+    private final Handler mHandler;
+    private final String clientName;
+    private final int version;
     private boolean mConnected = false;
     private Messenger mRemote = null;
     private Messenger mClient;
-    private Bundle mInfo;
+    private final Bundle mInfo;
     private String newVer = null;
     private int mPID;
 

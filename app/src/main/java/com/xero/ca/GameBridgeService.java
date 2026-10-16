@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.support.annotation.NonNull;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -15,8 +16,8 @@ import java.util.List;
 public class GameBridgeService extends Service implements Handler.Callback {
     public static WeakReference<GameBridgeService> instance = new WeakReference<>(null);
     private static Callback mCallback;
-    private static List<Message> mQueue = Collections.synchronizedList(new ArrayList<>());
-    private Handler mHandler = new Handler(this);
+    private static final List<Message> mQueue = Collections.synchronizedList(new ArrayList<>());
+    private final Handler mHandler = new Handler(this);
 
     public static void setCallback(Callback c) {
         mCallback = c;
@@ -57,7 +58,7 @@ public class GameBridgeService extends Service implements Handler.Callback {
     }
 
     @Override
-    public boolean handleMessage(Message msg) {
+    public boolean handleMessage(@NonNull Message msg) {
         if (mCallback != null) {
             mCallback.onRemoteMessage(msg);
         } else {

@@ -17,7 +17,7 @@ public class Preference {
 
     private static Preference sInstance = null;
 
-    private SharedPreferences mPreferences;
+    private final SharedPreferences mPreferences;
 
     private Preference(Context context) {
         mPreferences = context.getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE);

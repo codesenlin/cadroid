@@ -48,7 +48,7 @@ public class AndroidContextFactory extends ContextFactory {
     /**
      * Create a ClassLoader which is able to deal with bytecode
      *
-     * @param parent the parent of the create classloader
+     * @param parent the parent of the creation classloader
      * @return a new ClassLoader
      */
     @VisibleForTesting
