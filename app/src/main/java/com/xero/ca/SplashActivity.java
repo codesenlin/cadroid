@@ -69,7 +69,7 @@ public class SplashActivity extends Activity {
     }
 
     class SetLoadingTitleTask implements Runnable {
-        private String title;
+        private final String title;
 
         public SetLoadingTitleTask(String title) {
             this.title = title;
@@ -85,7 +85,8 @@ public class SplashActivity extends Activity {
         @Override
         public void onPresent() {
             mAdSecondsView.setVisibility(View.VISIBLE);
-            mAdSkipView.setVisibility(View.VISIBLE);
+            // 新版优量汇 SDK 会在 adContainer 内自行绘制带倒计时的“跳过”按钮，
+            // 布局里的 skipView 不再交给 SDK，保持隐藏即可
         }
 
         @Override
