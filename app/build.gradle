@@ -1,21 +1,41 @@
 apply plugin: 'com.android.application'
 
+// 脚本（assets/script.js）是用「签名证书 DER 逐字节异或 + GZIP」加密的，
+// 所以签名用的密钥必须和 CA 侧 app/signatures/*.signature 里的证书一致。
+// 这里统一用 app/signatures/release.keystore（alias: testkey）：
+//   debug 包  -> 由 Gradle 用它签名，配合 signatures/debug.signature
+//   release 包 -> 保持未签名（app-release-unsigned.apk），由 CA 的
+//                 cabuild shellBuildRelease（zipalign + apksigner）用它签名
+def caKeystore = file('signatures/release.keystore')
+def caPasswordFile = file('signatures/release.password')
+
 android {
     namespace 'com.xero.ca'
-    compileSdkVersion 32
+    compileSdk 33
 
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility 1.8
-        targetCompatibility 1.8
+        sourceCompatibility 17
+        targetCompatibility 17
+    }
+
+    signingConfigs {
+        if (caKeystore.exists() && caPasswordFile.exists()) {
+            ca {
+                storeFile caKeystore
+                storePassword caPasswordFile.text.trim()
+                keyAlias 'testkey'
+                keyPassword caPasswordFile.text.trim()
+            }
+        }
     }
 
     defaultConfig {
         applicationId "com.xero.ca"
-        minSdkVersion 19
-        targetSdkVersion 32
-        versionCode 19303
-        versionName "1.2.14-Beta-12"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 20741
+        versionName "1.2.14"
         buildConfigField "int", "SHELL_VERSION", "26"
         multiDexEnabled true
     }
@@ -23,26 +43,48 @@ android {
         debug {
             debuggable true
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            multiDexEnabled true
+            // 没有 signatures/ 时退回 Android 默认调试签名（此时需自行重新生成 debug.signature）
+            signingConfig signingConfigs.findByName('ca') ?: signingConfigs.debug
+            jniDebuggable true
         }
         release {
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable false
+            jniDebuggable false
+            multiDexEnabled true
         }
+    }
+    buildToolsVersion '34.0.0'
+    buildFeatures {
+        viewBinding false
+        buildConfig true
+    }
+    dependenciesInfo {
+        includeInApk true
+        includeInBundle true
     }
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
 
-    implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.9.jar')
+    if (file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()) {
+        implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar')
+    }
+    // 本地依赖不入库（见 app/libs/.gitignore），缺失时跳过，转化SDK 不参与也不影响广告
+    if (file('libs/GDTActionSDK.min.1.9.8.aar').exists()) {
+        implementation files('libs/GDTActionSDK.min.1.9.8.aar')
+    }
+
+    implementation 'com.qq.e.union:union:4.710.1580'
     implementation 'com.android.support:support-annotations:28.0.0'
-    implementation 'org.mozilla:rhino-runtime:1.7.14'
-    implementation 'net.lingala.zip4j:zip4j:2.11.2'
-    implementation 'com.jakewharton.android.repackaged:dalvik-dx:11.0.0_r3'
-    implementation 'org.java-websocket:Java-WebSocket:1.5.3'
-
-    //GDT SDK require
-    //noinspection GradleCompatible
-    //implementation 'com.android.support:support-v4:28.0.0'
+    implementation 'com.android.support:support-v4:28.0.0'
+    implementation 'org.mozilla:rhino-runtime:1.7.15.1'
+    implementation 'net.lingala.zip4j:zip4j:2.11.6'
+    implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
+    implementation 'org.java-websocket:Java-WebSocket:1.6.0'
 }

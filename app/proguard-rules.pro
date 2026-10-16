@@ -16,6 +16,16 @@
 #   public *;
 #}
 
+# R8 完整模式（AGP 8 起默认开启）下会把“引用了不存在的类”当成错误，
+# 下面这些是依赖库引用到、但 Android 运行时/编译 SDK 里没有的类，忽略即可。
+# 规则由 AGP 生成于 build/outputs/mapping/release/missing_rules.txt
+-dontwarn android.app.Activity$ScreenCaptureCallback
+-dontwarn java.beans.BeanDescriptor
+-dontwarn java.beans.BeanInfo
+-dontwarn java.beans.IntrospectionException
+-dontwarn java.beans.Introspector
+-dontwarn java.beans.PropertyDescriptor
+
 # TalkingData SDK
 -dontwarn com.tendcloud.tenddata.**
 -keep class com.tendcloud.** {
@@ -24,6 +34,16 @@
 -keep public class com.tendcloud.** {
     public protected *;
 }
+
+# GDT SDK
+-dontwarn com.qq.gdt.action.**
+-keep class com.qq.gdt.action.** {*;}
+-keepclassmembers class com.qq.gdt.action.** {*;}
+-keep public class com.tencent.turingfd.sdk.**
+-keep class com.**.TNative$aa {public *;}
+-keep class com.**.TNative$aa$bb {public *;}
+-keep class com.**.TNative$bb {*;}
+-keep class com.**.TNative$bb$I {*;}
 
 # Scripting
 -keep @com.xero.ca.script.ScriptObject public class *{
