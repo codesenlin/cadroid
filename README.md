@@ -29,10 +29,13 @@
 
 | 文件 | 作用 | 缺失时 |
 | --- | --- | --- |
-| `SaaS_TalkingDataSDK_Android_V5.0.38.jar` | TalkingData 统计 | 用 `app/src/stub/java` 里的空实现编译，统计功能关闭 |
-| `GDTActionSDK.min.1.9.8.aar` | 优量汇转化（回传）SDK | 跳过该依赖，广告本身不受影响 |
+| `SaaS_TalkingDataSDK_Android_V5.0.38.jar` | TalkingData 统计 | 用 `app/src/stub/talkingdata` 里的空实现编译，统计功能关闭 |
+| `GDTActionSDK.min.1.9.8.aar` | 优量汇**转化（回传）SDK**，与广告 SDK 配套 | **整套优量汇都不装配**，不请求开屏广告 |
 
-广告 SDK 本体走 Maven（`com.qq.e.union:union:4.710.1580`），不需要手动放。
+优量汇的广告 SDK（`com.qq.e.union:union:4.710.1580`，由 Maven 拉取）与转化 SDK 是配套使用的：
+**有 `GDTActionSDK.min.1.9.8.aar` 就两个都加载，没有就两个都不加载**，避免出现「投放广告但缺转化回传」
+的半套状态。缺 aar 时用 `app/src/stub/gdt` 里的空实现编译，并把 `BuildConfig.GDT_ENABLED` 置为
+`false`——`XApplication` 不再初始化 SDK，`AdProvider` 直接跳过广告（连 10 秒等待都不会有）。
 
 ### 2. 账号/密钥 → 写 `local.properties`
 

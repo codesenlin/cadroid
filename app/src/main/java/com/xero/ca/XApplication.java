@@ -53,9 +53,10 @@ public class XApplication extends Application {
     public void onCreate() {
         super.onCreate();
         TalkingDataSDK.initSDK(this.getApplicationContext(), Secret.getTDToken(), "default", "");
-        // 优量汇（GDT）广告 SDK：AppID 从 4.x 起只能通过这里传入，必须在请求广告前初始化
+        // 优量汇（GDT）广告 SDK：AppID 从 4.x 起只能通过这里传入，必须在请求广告前初始化。
+        // GDT_ENABLED 为 false 表示构建时没装配优量汇（缺 GDTActionSDK aar），直接跳过。
         String gdtAppId = Secret.getGDTAppID();
-        if (gdtAppId != null && !gdtAppId.isEmpty()) {
+        if (BuildConfig.GDT_ENABLED && gdtAppId != null && !gdtAppId.isEmpty()) {
             GDTAdSdk.initWithoutStart(this, gdtAppId);
             GDTAdSdk.start(null);
         }

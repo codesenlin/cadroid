@@ -90,7 +90,10 @@ public class AdProvider {
     }
 
     private static boolean isAdEnabled() {
-        return !TextUtils.isEmpty(Secret.getGDTAppID()) && !TextUtils.isEmpty(Secret.getGDTPosID());
+        // GDT_ENABLED：构建时是否装配了优量汇（广告 + 转化两个 SDK 是一套，见 app/build.gradle）
+        return BuildConfig.GDT_ENABLED
+                && !TextUtils.isEmpty(Secret.getGDTAppID())
+                && !TextUtils.isEmpty(Secret.getGDTPosID());
     }
 
     public void runAfterComplete(OnCompleteListener listener) {

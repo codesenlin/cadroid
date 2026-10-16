@@ -21,6 +21,14 @@ def secretValue = { String name ->
     '"' + ((localProps.getProperty(name) ?: '').replace('\\', '\\\\').replace('"', '\\"')) + '"'
 }
 
+// 优量汇（GDT）的两个组件是配套使用的，必须有一起有、没有一起没有：
+//   - 广告 SDK：com.qq.e.union:union（Maven）
+//   - 转化（回传）SDK：app/libs/GDTActionSDK.min.1.9.8.aar（本地，不入库）
+// 本地没有那个 aar 时两个都不加载（也就不会出现「投放广告但没有转化回传」的半套状态），
+// 此时用 app/src/stub/gdt 里的空实现编译，并让 BuildConfig.GDT_ENABLED=false 跳过广告逻辑。
+def gdtAvailable = file('libs/GDTActionSDK.min.1.9.8.aar').exists()
+def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()
+
 android {
     namespace 'com.xero.ca'
     compileSdk 33
@@ -56,6 +64,8 @@ android {
         buildConfigField "String", "SECRET_GITEE_CLIENT_ID", secretValue('ca.giteeClientId')
         buildConfigField "String", "SECRET_GITEE_CLIENT_SECRET", secretValue('ca.giteeClientSecret')
         buildConfigField "String", "SECRET_GITEE_FEEDBACK_TOKEN", secretValue('ca.giteeFeedbackToken')
+        // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
+        buildConfigField "boolean", "GDT_ENABLED", gdtAvailable.toString()
         multiDexEnabled true
     }
     buildTypes {
@@ -80,10 +90,14 @@ android {
     buildToolsVersion '34.0.0'
     sourceSets {
         main {
-            // 本地没有 TalkingData jar 时，用 app/src/stub/java 里的空实现编译，
-            // 保证 clone 下来没有任何本地依赖也能直接构建（统计功能等于关闭）
-            if (!file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()) {
-                java.srcDir 'src/stub/java'
+            // 缺哪个本地依赖就把对应的空实现加进来，保证 clone 下来没有本地文件也能构建：
+            //   src/stub/talkingdata  统计 SDK（TalkingData）缺失时
+            //   src/stub/gdt          广告/转化 SDK 缺失时（两个一起缺席）
+            if (!tdAvailable) {
+                java.srcDir 'src/stub/talkingdata'
+            }
+            if (!gdtAvailable) {
+                java.srcDir 'src/stub/gdt'
             }
         }
     }
@@ -100,16 +114,16 @@ android {
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
 
-    if (file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()) {
+    // 本地依赖不入库（见 app/libs/.gitignore）；缺失时用 src/stub 下的空实现编译（见 sourceSets）
+    if (tdAvailable) {
         implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar')
     }
-    // 上面的 jar 缺失时，改用 app/src/stub/java 里的空实现（见 sourceSets）
-    // 本地依赖不入库（见 app/libs/.gitignore），缺失时跳过，转化SDK 不参与也不影响广告
-    if (file('libs/GDTActionSDK.min.1.9.8.aar').exists()) {
+    if (gdtAvailable) {
+        // 广告 SDK 与转化 SDK 配套：有 aar 就两个都加载，没有就两个都不加载
         implementation files('libs/GDTActionSDK.min.1.9.8.aar')
+        implementation 'com.qq.e.union:union:4.710.1580'
     }
 
-    implementation 'com.qq.e.union:union:4.710.1580'
     implementation 'com.android.support:support-annotations:28.0.0'
     implementation 'com.android.support:support-v4:28.0.0'
     implementation 'org.mozilla:rhino-runtime:1.7.15.1'
