@@ -56,6 +56,13 @@
 -keep public class com.xero.ca.R$* {
     public *;
 }
+# 核心脚本按类名反射调用（modules/utils/DBSettings.js 的 getUndefinedInstance），
+# 原作者 1.2.14-Beta-14 的正式包里这个类名同样是保留的；不 keep 会被 R8 改名成
+# com.xero.ca.script.a，脚本里那句调用就会失败（我们的内核有 try/catch 兜底，
+# 只是退回 org.mozilla.javascript.Undefined；官方内核没兜底，会直接抛异常）
+-keep class com.xero.ca.script.WrappedUndefined {
+    *;
+}
 -keep class org.mozilla.** {
     *;
 }
