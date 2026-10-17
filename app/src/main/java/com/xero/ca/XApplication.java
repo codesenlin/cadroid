@@ -1,5 +1,7 @@
 package com.xero.ca;
 
+import com.xero.ca.gen.Secret;
+
 import android.app.Application;
 import android.content.Context;
 import android.content.pm.PackageManager;

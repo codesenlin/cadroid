@@ -16,7 +16,7 @@
 
 > 上面 1~3 步由 [CA](https://gitee.com/projectxero/ca) 仓库的构建工具自动完成：
 > `cabuild shellPrepareDebug`（调试包）或 `cabuild shellBuildRelease`（正式包，
-> 含 zipalign + apksigner 签名），配置见 `CA/config/shell.txt`。
+> 含 zipalign + apksigner 签名），配置见 `CA/config/shell.local.txt`（首次运行时由模板生成）。
 > 日常调试也可以直接 `./gradlew :app:assembleDebug`（用的是 assets 里已有的 script.js）。
 
 ## 本地依赖与本机密钥（可选）
@@ -37,20 +37,35 @@
 的半套状态。缺 aar 时用 `app/src/stub/gdt` 里的空实现编译，并把 `BuildConfig.GDT_ENABLED` 置为
 `false`——`XApplication` 不再初始化 SDK，`AdProvider` 直接跳过广告（连 10 秒等待都不会有）。
 
-### 2. 账号/密钥 → 写 `local.properties`
+### 2. 账号/密钥 → 逐条合并（`private` > `default` > `template`）
 
-`Secret.java` 入库但值是空的，真实值由 `local.properties` 经 BuildConfig 注入：
+三份候选文件都在 `app/src/main/java/com/xero/ca/` 下：
 
-```properties
-ca.tdToken=              # TalkingData 统计 token
-ca.gdtAppId=             # 优量汇媒体 AppID（后台“媒体管理”里获取）
-ca.gdtPosId=             # 优量汇开屏广告位 ID
-ca.giteeClientId=        # Gitee OAuth 应用 client id
-ca.giteeClientSecret=    # Gitee OAuth 应用 client secret
-ca.giteeFeedbackToken=   # 自建反馈平台 token
+| 优先级 | 文件 | 说明 |
+| --- | --- | --- |
+| 1 | `Secret.java` | **本机私人配置**（同目录 `.gitignore` 已忽略，可选） |
+| 2 | `config_default/Secret.java` | **默认配置**：CA 原作者公开的那份值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth 凭据） |
+| 3 | `config_template/Secret.java` | **模板**：全部留空，兜底 |
+
+**合并是按条目（每个 getter）来的，不是整份文件**：例如私人文件里只填了 TalkingData
+token、其余留空，那么广告 AppID / 广告位 / Gitee 那几项会各自回退到默认配置的值；
+某一条在默认里也是空，才落回模板的空实现（该功能关闭）。
+
+**怎么用自己的值**：把 `config_template/Secret.java` 复制成 `com/xero/ca/Secret.java`，填上自己的
+条目即可（只填需要的，其余留空就会自动用默认值）；这个路径不会被提交。
+
+**实现**：`app/secret-config.gradle` 在构建时解析这三份文件、逐条合并，生成
+`com/xero/ca/gen/Secret.java` 后参与编译（放在 `gen` 包下，避免和私人文件名抢同一个
+类名；`private` / `default` / `template` 三份都只当数据源、不直接编译）。构建日志会列出
+每一项最终来自哪份：
+
+```
+Secret 配置（逐条合并）:
+  getTDToken: private（本机） （已配置）
+  getGDTAppID: default（默认） （已配置）
+  ...
 ```
 
-留空即关闭对应功能（没有 AppID/PosID 时不请求广告，直接进脚本）。
-`local.properties` 已在 `.gitignore` 中，请勿提交。
-
+热更新校验公钥是公开信息，`default` / `template` 里都写死同一份（我们自己的那张，配
+`app/signatures/privateKey.pem`），换签名密钥时记得同步。
 

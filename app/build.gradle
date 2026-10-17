@@ -9,18 +9,6 @@ apply plugin: 'com.android.application'
 def caKeystore = file('signatures/release.keystore')
 def caPasswordFile = file('signatures/release.password')
 
-// 账号/密钥类值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth、反馈 token）
-// 一律从 local.properties 读取，仓库里的 Secret.java 直接取 BuildConfig，
-// 默认留空 → 对应功能自动关闭。键名见 README「本地依赖与本机密钥」。
-def localProps = new Properties()
-def localPropsFile = rootProject.file('local.properties')
-if (localPropsFile.exists()) {
-    localPropsFile.withInputStream { localProps.load(it) }
-}
-def secretValue = { String name ->
-    '"' + ((localProps.getProperty(name) ?: '').replace('\\', '\\\\').replace('"', '\\"')) + '"'
-}
-
 // 优量汇（GDT）的两个组件是配套使用的，必须有一起有、没有一起没有：
 //   - 广告 SDK：com.qq.e.union:union（Maven）
 //   - 转化（回传）SDK：app/libs/GDTActionSDK.min.1.9.8.aar（本地，不入库）
@@ -57,13 +45,6 @@ android {
         versionCode 20741
         versionName "1.2.14"
         buildConfigField "int", "SHELL_VERSION", "26"
-        // 下列值来自 local.properties（缺省为空，功能自动关闭），Secret.java 直接读取
-        buildConfigField "String", "SECRET_TD_TOKEN", secretValue('ca.tdToken')
-        buildConfigField "String", "SECRET_GDT_APP_ID", secretValue('ca.gdtAppId')
-        buildConfigField "String", "SECRET_GDT_POS_ID", secretValue('ca.gdtPosId')
-        buildConfigField "String", "SECRET_GITEE_CLIENT_ID", secretValue('ca.giteeClientId')
-        buildConfigField "String", "SECRET_GITEE_CLIENT_SECRET", secretValue('ca.giteeClientSecret')
-        buildConfigField "String", "SECRET_GITEE_FEEDBACK_TOKEN", secretValue('ca.giteeFeedbackToken')
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField "boolean", "GDT_ENABLED", gdtAvailable.toString()
         multiDexEnabled true
@@ -99,6 +80,11 @@ android {
             if (!gdtAvailable) {
                 java.srcDir 'src/stub/gdt'
             }
+            // 三份配置文件只当数据源，由 secret-config.gradle 合并生成 com/xero/ca/gen/Secret.java
+            java.exclude 'com/xero/ca/Secret.java'
+            java.exclude 'com/xero/ca/config_default/**'
+            java.exclude 'com/xero/ca/config_template/**'
+            java.srcDir layout.buildDirectory.dir('generated/source/secret')
         }
     }
     buildFeatures {
@@ -110,6 +96,7 @@ android {
         includeInBundle true
     }
 }
+
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.2.2'
@@ -131,3 +118,6 @@ dependencies {
     implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
     implementation 'org.java-websocket:Java-WebSocket:1.6.0'
 }
+
+// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle
+apply from: 'secret-config.gradle'
