@@ -18,11 +18,11 @@ def gdtAvailable = file('libs/GDTActionSDK.min.1.9.8.aar').exists()
 def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()
 
 android {
-    namespace 'com.xero.ca'
-    compileSdk 33
+    namespace = 'com.xero.ca'
+    compileSdk = 33
 
     compileOptions {
-        coreLibraryDesugaringEnabled true
+        coreLibraryDesugaringEnabled = true
         sourceCompatibility 17
         targetCompatibility 17
     }
@@ -47,16 +47,16 @@ android {
         buildConfigField "int", "SHELL_VERSION", "26"
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField "boolean", "GDT_ENABLED", gdtAvailable.toString()
-        multiDexEnabled true
+        multiDexEnabled = true
     }
     buildTypes {
         debug {
             debuggable true
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            multiDexEnabled true
+            multiDexEnabled = true
             // 没有 signatures/ 时退回 Android 默认调试签名（此时需自行重新生成 debug.signature）
-            signingConfig signingConfigs.findByName('ca') ?: signingConfigs.debug
+            signingConfig = signingConfigs.findByName('ca') ?: signingConfigs.debug
             jniDebuggable true
         }
         release {
@@ -65,10 +65,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             debuggable false
             jniDebuggable false
-            multiDexEnabled true
+            multiDexEnabled = true
         }
     }
-    buildToolsVersion '34.0.0'
     sourceSets {
         main {
             // 缺哪个本地依赖就把对应的空实现加进来，保证 clone 下来没有本地文件也能构建：
@@ -88,12 +87,12 @@ android {
         }
     }
     buildFeatures {
-        viewBinding false
-        buildConfig true
+        viewBinding = false
+        buildConfig = true
     }
     dependenciesInfo {
-        includeInApk true
-        includeInBundle true
+        includeInApk = true
+        includeInBundle = true
     }
 }
 
