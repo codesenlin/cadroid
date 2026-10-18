@@ -1,4 +1,4 @@
-package com.xero.ca.config_template;
+package config.template;
 
 import android.util.Base64;
 
@@ -8,10 +8,10 @@ import android.util.Base64;
  *
  * 本文件入库，保证 clone 下来不做任何配置也能编译。
  *
- * 用法：把本文件复制成 app/src/main/java/com/xero/ca/Secret.java 填自己的值即可
+ * 用法：把本文件复制成 app/src/main/java/config/local/Secret.java 填自己的值即可
  * （那个路径已被 .gitignore 忽略，不会被提交）。合并是**逐条**的：某个 getter 在
- * 私人文件里返回空字符串，就单独回退到 config_default/Secret.java 的对应值；默认那条也是空，
- * 才落回 config_template/Secret.java 的空实现。合并逻辑见 app/secret-config.gradle，
+ * 私人文件里返回空字符串，就单独回退到 config/config/standard/Secret.java 的对应值；默认那条也是空，
+ * 才落回 config/config/template/Secret.java 的空实现。合并逻辑见 app/secret-config.gradle，
  * 生成 com/xero/ca/gen/Secret.java 参与编译。
  */
 public class Secret {
