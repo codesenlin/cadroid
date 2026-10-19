@@ -34,6 +34,10 @@ android {
                 storePassword caPasswordFile.text.trim()
                 keyAlias 'testkey'
                 keyPassword caPasswordFile.text.trim()
+                // 附加 V3 签名（APK Signature Scheme v3），v1/v2 一并保留以兼容旧系统
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
             }
         }
     }
@@ -42,7 +46,7 @@ android {
         applicationId "com.xero.ca"
         minSdkVersion 21
         targetSdkVersion 33
-        versionCode 20741
+        versionCode 20748
         versionName "1.2.14"
         buildConfigField "int", "SHELL_VERSION", "26"
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
@@ -66,6 +70,16 @@ android {
             debuggable false
             jniDebuggable false
             multiDexEnabled = true
+        }
+        // 测试版：不混淆、不裁资源（便于看堆栈和反查），只改包名 com.xero.ca.debug，
+        // 用同一张证书 + V3 签名，可以直接安装、与 com.xero.ca 共存。
+        // 代价：dex 不能像 release 那样收到 2 个，会按方法数拆成多个。
+        trial {
+            initWith release
+            minifyEnabled false
+            shrinkResources false
+            applicationIdSuffix ".debug"
+            signingConfig signingConfigs.findByName('ca') ?: signingConfigs.debug
         }
     }
     sourceSets {
