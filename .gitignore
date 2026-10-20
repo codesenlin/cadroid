@@ -2,10 +2,13 @@
 build/
 captures/
 .gradle/
+.kotlin/
 *.apk
 *.ap_
+*.aab
 *.class
 *.dex
+*.hprof
 
 # ===== IDE 和本机配置 =====
 .idea/
