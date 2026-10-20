@@ -10,6 +10,7 @@ buildscript {
         // 7.3.1/7.4.x 自带的 R8 在 dex zip4j / dalvik-dx / slf4j-api 时会抛
         // NullPointerException，导致 mergeExtDexDebug 失败；AGP 8.7.2（R8 8.7.18）正常
         classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
