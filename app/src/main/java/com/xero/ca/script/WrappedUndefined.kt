@@ -10,6 +10,8 @@ object WrappedUndefined {
     @JvmStatic
     fun get(cx: Context, scope: Scriptable): Scriptable {
         val undefined = Context.getUndefinedValue()
-        return cx.wrapFactory.wrapAsJavaObject(cx, scope, undefined, null) as Scriptable
+        // Rhino 1.9.1 新增了 wrapAsJavaObject(..., TypeInfo) 重载，
+        // 传裸 null 会二义，显式指定 Class<?> 版本
+        return cx.wrapFactory.wrapAsJavaObject(cx, scope, undefined, null as Class<*>?) as Scriptable
     }
 }

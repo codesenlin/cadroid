@@ -58,7 +58,7 @@ class Preference private constructor(context: Context) {
             uuid = UUID.randomUUID().toString()
             mPreferences.edit().putString(SETTING_USER_ID, uuid).apply()
         }
-        return uuid!!
+        return uuid
     }
 
     companion object {

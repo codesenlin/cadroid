@@ -40,12 +40,8 @@ class SplashActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (!mProvider.isCompleted() &&
-            (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_HOME)
-        ) {
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+        return !mProvider.isCompleted() &&
+                (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_HOME) || super.onKeyDown(keyCode, event)
     }
 
     override fun onPause() {

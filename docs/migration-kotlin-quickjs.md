@@ -9,23 +9,23 @@
 
 44 个 Java 文件 / 4117 行，其中：
 
-| 处理 | 文件 | 原因 |
-|---|---|---|
-| **迁移** | `app/src/main/java/com/**`（36 个） | 应用逻辑 |
-| **保留 Java** | `app/src/stub/**`（5 个） | GDT / TalkingData 的桩，必须与外部 SDK 的 ABI 逐字节一致，Kotlin 会加 `INSTANCE`、改方法签名 |
-| **保留 Java** | `config/{standard,template}/Secret.java`（2 个） | 构建时生成 `Secret` 类用的来源模板 |
-| **保留 Java** | `javax/lang/model/SourceVersion.java`（1 个） | 给 Rhino 用的 Java 8 API 桩 |
+| 处理          | 文件                                             | 原因                                                                                         |
+|---------------|--------------------------------------------------|----------------------------------------------------------------------------------------------|
+| **迁移**      | `app/src/main/java/com/**`（36 个）              | 应用逻辑                                                                                     |
+| **保留 Java** | `app/src/stub/**`（5 个）                        | GDT / TalkingData 的桩，必须与外部 SDK 的 ABI 逐字节一致，Kotlin 会加 `INSTANCE`、改方法签名 |
+| **保留 Java** | `config/{standard,template}/Secret.java`（2 个） | 构建时生成 `Secret` 类用的来源模板                                                           |
+| **保留 Java** | `javax/lang/model/SourceVersion.java`（1 个）    | 给 Rhino 用的 Java 8 API 桩                                                                  |
 
 ### 阶段
 
-| 阶段 | 内容 | 状态 |
-|---|---|---|
-| P0 | 接入 Kotlin（2.0.21 / jvmTarget 17）+ 首批 5 个无反射风险文件 | ✅ `b102f0a` |
-| P1 | 12 个低风险文件（Activity/Service/Receiver/Preference/Provider） | ✅ 3 个提交 |
-| P2 | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | ✅ 2 个提交 |
-| P3 | 4 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353 / AnalyticsPlatform 52） | ✅ 3 个提交 |
-| P4 | 6 个类加载器（com/faendir/rhino_android/*） | ✅ 2 个提交 |
-| P5 | 同步到 CA_Reforged/cadroid 并推送 | 待做 |
+| 阶段 | 内容                                                                                                       | 状态         |
+|------|------------------------------------------------------------------------------------------------------------|--------------|
+| P0   | 接入 Kotlin（2.0.21 / jvmTarget 17）+ 首批 5 个无反射风险文件                                              | ✅ `b102f0a` |
+| P1   | 12 个低风险文件（Activity/Service/Receiver/Preference/Provider）                                           | ✅ 3 个提交  |
+| P2   | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | ✅ 2 个提交  |
+| P3   | 4 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353 / AnalyticsPlatform 52）    | ✅ 3 个提交  |
+| P4   | 6 个类加载器（com/faendir/rhino_android/*）                                                                | ✅ 2 个提交  |
+| P5   | 同步到 CA_Reforged/cadroid 并推送                                                                          | 待做         |
 
 **结果：36 个应用代码文件全部 Kotlin 化，8 个 Java 刻意保留（stub 5 + config 模板 2 + javax 1）。**
 
@@ -58,13 +58,13 @@ javap -p -classpath app/build/tmp/kotlin-classes/debug <被 JS 反射的类>
 
 脚本里直接访问 Java/Android 的地方：
 
-| 用法 | 次数 |
-|---|---|
-| `java.*` | 167 |
-| `android.*` | 174 |
-| `Packages.*` | 1 |
+| 用法                                                                 | 次数   |
+|----------------------------------------------------------------------|--------|
+| `java.*`                                                             | 167    |
+| `android.*`                                                          | 174    |
+| `Packages.*`                                                         | 1      |
 | `instanceof java.lang.CharSequence` / `java.io.File` / `G.WebView` … | 数十处 |
-| `getClass()` | 2 |
+| `getClass()`                                                         | 2      |
 
 分布在 13 个脚本文件里（`CA/modules/*.js`、`CA/main.js`）。
 
@@ -96,13 +96,13 @@ QuickJS 换上去之后，必须自己实现：
 
 ### 建议的推进方式
 
-| 阶段 | 内容 | 产出 |
-|---|---|---|
+| 阶段   | 内容                                                                                                                          | 产出                                             |
+|--------|-------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
 | **E0** | 定义 `JsEngine` / `JsValue` 接口，把 `ScriptInterface`、`ScriptManager` 改成面向接口；先接一个 `RhinoEngine` 实现（行为不变） | 可测的抽象层，**同时让 P3 的 Kotlin 迁移变简单** |
-| **E1** | 用 QuickJS 绑定实现 `QuickJsEngine`，先做到"能执行脚本、能调 `@ScriptObject` 方法" | 最小可用 |
-| **E2** | 实现 `java`/`android`/`Packages` 命名空间 + 反射 + 重载解析 | 脚本不改也能跑 |
-| **E3** | 双引擎并存，用 feature flag 切换，跑同一套脚本做对比 | 可回滚 |
-| **E4** | 性能实测（冷启动、补全延迟、内存），确认收益后再决定默认引擎 | 决策依据 |
+| **E1** | 用 QuickJS 绑定实现 `QuickJsEngine`，先做到"能执行脚本、能调 `@ScriptObject` 方法"                                            | 最小可用                                         |
+| **E2** | 实现 `java`/`android`/`Packages` 命名空间 + 反射 + 重载解析                                                                   | 脚本不改也能跑                                   |
+| **E3** | 双引擎并存，用 feature flag 切换，跑同一套脚本做对比                                                                          | 可回滚                                           |
+| **E4** | 性能实测（冷启动、补全延迟、内存），确认收益后再决定默认引擎                                                                  | 决策依据                                         |
 
 ### 先量再换
 

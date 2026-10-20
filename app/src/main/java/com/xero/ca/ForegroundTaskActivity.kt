@@ -45,10 +45,7 @@ class ForegroundTaskActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (mModal && (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_HOME)) {
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
+        return mModal && (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_HOME) || super.onKeyDown(keyCode, event)
     }
 
     override fun onPause() {

@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import kotlin.system.exitProcess
 
 class BugReportActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,7 +34,7 @@ class BugReportActivity : Activity() {
                     setNeutralButton("立即停止") { _, _ ->
                         finish()
                         android.os.Process.killProcess(epid)
-                        System.exit(0)
+                        exitProcess(0)
                     }
                 }
             }
@@ -41,7 +42,7 @@ class BugReportActivity : Activity() {
     }
 
     private fun setClipText(str: String) {
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val cm = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
         cm?.setPrimaryClip(ClipData.newPlainText("", str))
     }
 

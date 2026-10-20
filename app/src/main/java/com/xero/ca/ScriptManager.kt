@@ -4,7 +4,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
-
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function
 import org.mozilla.javascript.Kit
@@ -14,7 +13,6 @@ import org.mozilla.javascript.ScriptRuntime
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.StackStyle
 import org.mozilla.javascript.WrapFactory
-
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileReader
@@ -23,7 +21,6 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.Reader
 import java.lang.ref.WeakReference
-import java.lang.reflect.Field
 
 /**
  * 脚本引擎的管理者：负责创建 Rhino Context、加载/编译脚本、在独立线程里跑事件循环。
@@ -104,14 +101,14 @@ class ScriptManager private constructor() {
         this.cacheDir = cacheDir
     }
 
-    protected fun initContext(): Context {
+    private fun initContext(): Context {
         val context = com.faendir.rhino_android.RhinoAndroidHelper().enterContext()
         context.setOptimizationLevel(-1)
         context.setLanguageVersion(Context.VERSION_ES6)
         return context
     }
 
-    protected fun initScope(cx: Context): Scriptable {
+    private fun initScope(cx: Context): Scriptable {
         val wrapFactory: WrapFactory = cx.wrapFactory
         val s = cx.initStandardObjects()
         s.put(
@@ -121,10 +118,10 @@ class ScriptManager private constructor() {
         return s
     }
 
-    protected fun initScriptInterface(): ScriptInterface = ScriptInterface(this)
+    private fun initScriptInterface(): ScriptInterface = ScriptInterface(this)
 
     @Throws(IOException::class)
-    protected fun getScriptReader(): Reader {
+    private fun getScriptReader(): Reader {
         val file = debugFile
         if (file != null) {
             try {
@@ -167,7 +164,7 @@ class ScriptManager private constructor() {
     }
 
     @Throws(IOException::class)
-    protected fun getCompiledScript(): Script {
+    private fun getCompiledScript(): Script {
         val source = getScriptReader().use { reader -> Kit.readReader(reader) }
         val cache = cacheDir
         return if (cache != null && debugFile != null) {
@@ -177,7 +174,7 @@ class ScriptManager private constructor() {
         }
     }
 
-    protected fun cachedCompileScript(source: String, sourceName: String?, cacheFile: File): Script {
+    private fun cachedCompileScript(source: String, sourceName: String?, cacheFile: File): Script {
         val hash = ScriptFileStream.getStringHash(source)
         if (cacheFile.exists()) {
             try {

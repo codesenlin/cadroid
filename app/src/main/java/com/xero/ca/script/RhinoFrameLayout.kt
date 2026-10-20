@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
+import kotlin.math.ceil
 
 /**
  * 供脚本接管按键/触摸分发的 FrameLayout。
@@ -73,7 +74,7 @@ class RhinoFrameLayout @JvmOverloads constructor(
         private val direction: Int,
     ) : ViewOutlineProvider() {
         override fun getOutline(view: View, outline: Outline) {
-            val intRadius = Math.ceil(radius.toDouble()).toInt()
+            val intRadius = ceil(radius.toDouble()).toInt()
             when (direction) {
                 DIRECTION_LEFT -> outline.setRoundRect(0, 0, view.width + intRadius, view.height, radius)
                 DIRECTION_TOP -> outline.setRoundRect(0, 0, view.width, view.height + intRadius, radius)

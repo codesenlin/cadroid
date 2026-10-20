@@ -1,11 +1,9 @@
 package com.xero.ca
 
 import android.app.Activity
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-
 import com.xero.ca.script.ScriptObject
 
 class PermissionRequestActivity : Activity() {
@@ -34,10 +32,7 @@ class PermissionRequestActivity : Activity() {
 
     @ScriptObject
     override fun shouldShowRequestPermissionRationale(permission: String): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return super.shouldShowRequestPermissionRationale(permission)
-        }
-        return false
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && super.shouldShowRequestPermissionRationale(permission)
     }
 
     @ScriptObject

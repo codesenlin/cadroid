@@ -16,6 +16,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.SimpleDateFormat
 import java.util.Date
+import kotlin.system.exitProcess
 
 class XApplication : Application() {
     override fun onCreate() {
@@ -35,7 +36,7 @@ class XApplication : Application() {
         override fun uncaughtException(t: Thread, e: Throwable) {
             reportError(this@XApplication, t, e)
             android.os.Process.killProcess(android.os.Process.myPid())
-            System.exit(0)
+            exitProcess(0)
         }
     }
 

@@ -272,11 +272,7 @@ class ScriptFileStream private constructor(key: ByteArray?, stream: InputStream?
 
         private var mReadBytes = 0
         private var mMark = -1
-        private val mKeys: ByteArray
-
-        init {
-            mKeys = if (keys == null || keys.isEmpty()) byteArrayOf(0) else keys
-        }
+        private val mKeys: ByteArray = if (keys == null || keys.isEmpty()) byteArrayOf(0) else keys
 
         /* Bug 修复
          * Android 7.x 无法解码代码

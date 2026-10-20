@@ -33,7 +33,7 @@ import java.net.URISyntaxException
  */
 @ScriptObject
 class ScriptInterface(manager: ScriptManager) {
-    private val mManager: ScriptManager
+    private val mManager: ScriptManager = manager
     private val mContext: Context
     private var mBindActivity: SplashActivity? = null
     private var mBindService: ScriptService? = null
@@ -46,7 +46,6 @@ class ScriptInterface(manager: ScriptManager) {
     private var mOfflineReason: String? = null
 
     init {
-        mManager = manager
         mContext = manager.getBindContext()!!
         if (mContext is ScriptService) {
             mBindService = mContext
