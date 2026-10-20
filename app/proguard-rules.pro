@@ -69,3 +69,7 @@
 -keep public class org.java_websocket.** {
     public *;
 }
+
+# 加速库：只被核心脚本通过 Rhino 反射（Packages.top.projectxero.ca.accel.Accel）调用，
+# Java 侧没有任何静态引用，R8 会把它整个裁掉，必须显式保留
+-keep class top.projectxero.ca.accel.** { *; }
