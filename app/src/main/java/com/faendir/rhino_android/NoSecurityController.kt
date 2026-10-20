@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.faendir.rhino_android;
+package com.faendir.rhino_android
 
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.GeneratedClassLoader;
-import org.mozilla.javascript.SecurityController;
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.GeneratedClassLoader
+import org.mozilla.javascript.SecurityController
 
-import java.io.Serializable;
+import java.io.Serializable
 
 /**
  * The concept of SecurityControllers doesn't make sense on Android.
@@ -29,14 +29,15 @@ import java.io.Serializable;
  * @author F43nd1r
  * @since 11.01.2016
  */
-class NoSecurityController extends SecurityController implements Serializable {
-    @Override
-    public GeneratedClassLoader createClassLoader(ClassLoader classLoader, Object o) {
-        return Context.getCurrentContext().createClassLoader(classLoader);
-    }
+internal class NoSecurityController : SecurityController(), Serializable {
+    override fun createClassLoader(
+        classLoader: ClassLoader,
+        o: Any?,
+    ): GeneratedClassLoader = Context.getCurrentContext().createClassLoader(classLoader)
 
-    @Override
-    public Object getDynamicSecurityDomain(Object o) {
-        return null;
+    override fun getDynamicSecurityDomain(o: Any?): Any? = null
+
+    companion object {
+        private const val serialVersionUID = 1L
     }
 }
