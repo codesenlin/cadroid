@@ -21,11 +21,21 @@
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | P0 | 接入 Kotlin（2.0.21 / jvmTarget 17）+ 首批 5 个无反射风险文件 | ✅ `b102f0a` |
-| P1 | 12 个低风险文件（Activity/Service/Receiver/Preference/Provider） | 进行中：9/12 |
-| P2 | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | 待开始 |
-| P3 | 3 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353） | **等引擎决策** |
-| P4 | 6 个类加载器（com/faendir/rhino_android/*） | 待开始 |
-| P5 | 同步到 CA_Reforged/cadroid 并推送 | 待开始 |
+| P1 | 12 个低风险文件（Activity/Service/Receiver/Preference/Provider） | ✅ 3 个提交 |
+| P2 | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | ✅ 2 个提交 |
+| P3 | 4 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353 / AnalyticsPlatform 52） | ✅ 3 个提交 |
+| P4 | 6 个类加载器（com/faendir/rhino_android/*） | ✅ 2 个提交 |
+| P5 | 同步到 CA_Reforged/cadroid 并推送 | 待做 |
+
+**结果：36 个应用代码文件全部 Kotlin 化，8 个 Java 刻意保留（stub 5 + config 模板 2 + javax 1）。**
+
+### 迁移中踩到的语义差（都已修正）
+
+1. **`android.content.Context` 与 `org.mozilla.javascript.Context` 同名** —— 只 import Rhino 那个，Android 的写全限定名
+2. **包级私有类型不能出现在 public 方法返回类型里** —— `BaseAndroidClassLoader` 是包级私有，Kotlin 不允许 `createClassLoader` 返回它，上移到 `GeneratedClassLoader`
+3. **Java 的 `protected` 含同包可见，Kotlin 的只对子类开放** —— `AndroidContextFactory` 在同包调 `reset()`，改成 `internal`
+4. **`inner class` 里不能有 `companion object`** —— `TYPE_UPDATE`/`TYPE_CLICK` 挪到外层
+5. **Java 的 setter 可能被 Kotlin 解析成私有字段** —— `DirectClassFile.setAttributeFactory` 必须显式调用方法
 
 ### 迁移时必须守住的约定
 
