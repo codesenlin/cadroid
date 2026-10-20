@@ -17,6 +17,9 @@ def caPasswordFile = file('signatures/release.password')
 // 此时用 app/src/stub/gdt 里的空实现编译，并让 BuildConfig.GDT_ENABLED=false 跳过广告逻辑。
 def gdtAvailable = file('libs/GDTActionSDK.min.1.9.8.aar').exists()
 def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()
+// 加速库：CA 仓库的 caaccel/build.sh 产出。缺失时只是不启用 Java 加速，
+// JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
+def caaccelAvailable = file('libs/caaccel.jar').exists()
 
 android {
     namespace = 'com.xero.ca'
@@ -127,11 +130,19 @@ dependencies {
         implementation 'com.qq.e.union:union:4.710.1580'
     }
 
-    implementation 'com.android.support:support-annotations:28.0.0'
-    implementation 'com.android.support:support-v4:28.0.0'
+    // 命令助手高性能加速库（源码在 CA 仓库的 caaccel/，用 caaccel/build.sh 构建）
+    // 可选：jar 不在时不引入，Rhino 里 Packages 解析失败，JS 侧自动走回退实现
+    if (caaccelAvailable) {
+        implementation files('libs/caaccel.jar')
+    }
+
+    implementation 'androidx.annotation:annotation:1.11.0'
+    // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
     implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
     implementation 'org.java-websocket:Java-WebSocket:1.6.0'
+    // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
+    // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     implementation 'org.mozilla:rhino-runtime:1.7.15.1'
 }
 

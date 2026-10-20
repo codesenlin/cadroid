@@ -17,7 +17,7 @@
 package com.faendir.rhino_android
 
 import android.os.Build
-import android.support.annotation.RequiresApi
+import androidx.annotation.RequiresApi
 
 import com.android.dex.Dex
 

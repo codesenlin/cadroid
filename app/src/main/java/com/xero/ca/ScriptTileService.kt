@@ -8,7 +8,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
 
-import android.support.annotation.RequiresApi
+import androidx.annotation.RequiresApi
 
 import com.xero.ca.script.ScriptObject
 

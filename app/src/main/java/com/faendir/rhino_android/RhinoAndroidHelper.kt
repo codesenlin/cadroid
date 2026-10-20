@@ -16,7 +16,7 @@
 
 package com.faendir.rhino_android
 
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.ContextFactory
@@ -88,7 +88,9 @@ class RhinoAndroidHelper private constructor(private val cacheDirectory: File) {
          * @deprecated use [.enterContext] instead
          */
         @JvmStatic
-        @Deprecated("use enterContext() instead")
+        @Deprecated("use enterContext() instead",
+            ReplaceWith("RhinoAndroidHelper().enterContext()")
+        )
         fun prepareContext(): Context = RhinoAndroidHelper().enterContext()
     }
 }
