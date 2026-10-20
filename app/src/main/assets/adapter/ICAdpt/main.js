@@ -1,4 +1,4 @@
-const ctx = Packages.zhekasmirnov.launcher.utils.UIUtils.getContext();
+const ctx = UI.getContext();
 var Adapter = {
 	contextHandler : new android.os.Handler(ctx.getMainLooper()),
 	init : function() {
@@ -97,11 +97,16 @@ Callback.addCallback("tick", function () {
 var name= FileTools.ReadKeyValueFile("games/com.mojang/minecraftpe/options.txt").mp_username;
 var info = new android.os.Bundle();
 function data(bundle) {
-	var Player = Packages.zhekasmirnov.launcher.api.mod.adaptedscript.AdaptedScriptAPI.Player;
+	// v2.3：Player 是命名空间，位置信息要从 Entity 模块取
 	var Pointed = Player.getPointed().pos;
 	info.putStringArray("playernames", [name]);
-	info.putDoubleArray("playerposition", [Player.getX(), Player.getY(), Player.getZ()]);
-	info.putIntArray("pointedblockpos", [Pointed.x,Pointed.y,Pointed.z]);
+	try {
+		var pos = Entity.getPosition(Player.get());
+		info.putDoubleArray("playerposition", [pos.x, pos.y, pos.z]);
+	} catch (e) {
+		info.putDoubleArray("playerposition", [0, 0, 0]);
+	}
+	info.putIntArray("pointedblockpos", [Pointed.x, Pointed.y, Pointed.z]);
 	bundle.putString("action", "info");
 	bundle.putBundle("info", info);
 }
