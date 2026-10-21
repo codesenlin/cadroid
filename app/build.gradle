@@ -119,6 +119,7 @@ dependencies {
     if (tdAvailable) {
         implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar')
     }
+
     if (gdtAvailable) {
         // 广告 SDK 与转化 SDK 配套：有 aar 就两个都加载，没有就两个都不加载
         implementation files('libs/GDTActionSDK.min.1.9.8.aar')
