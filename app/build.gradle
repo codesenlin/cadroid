@@ -23,7 +23,7 @@ def caaccelAvailable = file('libs/caaccel.jar').exists()
 
 android {
     namespace = 'com.xero.ca'
-    compileSdk = 33
+    compileSdk = 34
 
     compileOptions {
         coreLibraryDesugaringEnabled = true
