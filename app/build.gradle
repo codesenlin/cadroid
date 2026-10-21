@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-apply plugin: 'org.jetbrains.kotlin.android'
 
 // 脚本（assets/script.js）是用「签名证书 DER 逐字节异或 + GZIP」加密的，
 // 所以签名用的密钥必须和 CA 侧 app/signatures/*.signature 里的证书一致。
@@ -29,10 +28,6 @@ android {
         coreLibraryDesugaringEnabled = true
         sourceCompatibility 17
         targetCompatibility 17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
     }
 
     signingConfigs {
@@ -103,7 +98,7 @@ android {
             }
             // 三份配置文件只当数据源，由 secret-config.gradle 合并生成 com/xero/ca/gen/Secret.java
             java.exclude 'config/**'
-            java.srcDir layout.buildDirectory.dir('generated/source/secret')
+            java.srcDir layout.buildDirectory.dir('generated/source/secret').get().asFile
         }
     }
     buildFeatures {
