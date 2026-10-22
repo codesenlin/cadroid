@@ -227,7 +227,10 @@ class AdProvider {
         @JvmStatic
         private fun isAdEnabled(): Boolean =
             // GDT_ENABLED：构建时是否装配了优量汇（广告 + 转化两个 SDK 是一套，见 app/build.gradle）
+            // GDT_ENABLED：构建期是否装配了优量汇
+            // GdtState.ready：运行期是否真的初始化成功（缺 libturingad.so 时为 false）
             BuildConfig.GDT_ENABLED &&
+                GdtState.ready &&
                 !TextUtils.isEmpty(Secret.getGDTAppID()) &&
                 !TextUtils.isEmpty(Secret.getGDTPosID())
     }

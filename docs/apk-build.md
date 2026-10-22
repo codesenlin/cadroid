@@ -58,3 +58,20 @@ java -jar tools/bundletool.jar install-apks --apks=build/dist/命令助手.apks
 - 不能上架 Google Play（Play 只收 AAB）
 
 需要上架时用 AAB 路线即可，没必要两套并存。
+
+## 只装 base 包（不带 ABI 分体）能不能用
+
+**能。** 实测过：
+
+1. 把 release APK 里的 `lib/**` 全部删掉（模拟只装了 base-master，没有 ABI 分体）
+2. 重新签名、装到 Android 14 真机
+3. 应用正常启动，无崩溃
+
+为此在代码里做了运行期保护：
+
+- `GdtState.ready`：优量汇是否**真的**初始化成功（区别于构建期的 `BuildConfig.GDT_ENABLED`）
+- `XApplication` 里 GDT 初始化包了 `try/catch (Throwable)` —— 缺 `libturingad.so` 时抛的是
+  `UnsatisfiedLinkError`，那是 Error 不是 Exception，普通 `catch (e: Exception)` 接不住
+- `AdProvider.isAdEnabled()` 同时看 `GDT_ENABLED`（构建期）和 `GdtState.ready`（运行期）
+
+结果：**没有原生库时，应用照常运行，只是广告关掉。**

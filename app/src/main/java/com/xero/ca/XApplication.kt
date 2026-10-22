@@ -26,8 +26,15 @@ class XApplication : Application() {
         // GDT_ENABLED 为 false 表示构建时没装配优量汇（缺 GDTActionSDK aar），直接跳过。
         val gdtAppId = Secret.getGDTAppID()
         if (BuildConfig.GDT_ENABLED && !gdtAppId.isNullOrEmpty()) {
-            GDTAdSdk.initWithoutStart(this, gdtAppId)
-            GDTAdSdk.start(null)
+            try {
+                GDTAdSdk.initWithoutStart(this, gdtAppId)
+                GDTAdSdk.start(null)
+                GdtState.ready = true
+            } catch (t: Throwable) {
+                // 缺 libturingad.so 时抛的是 UnsatisfiedLinkError（Error，不是 Exception），
+                // 只装 base 包（不带 ABI 分体）的设备会走到这里。广告关掉，应用照常跑。
+                android.util.Log.w("CA", "优量汇初始化失败，广告功能关闭: " + t.message)
+            }
         }
         Thread.setDefaultUncaughtExceptionHandler(ErrorCatcher())
     }
