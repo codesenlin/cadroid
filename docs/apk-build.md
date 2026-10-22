@@ -75,3 +75,38 @@ java -jar tools/bundletool.jar install-apks --apks=build/dist/命令助手.apks
 - `AdProvider.isAdEnabled()` 同时看 `GDT_ENABLED`（构建期）和 `GdtState.ready`（运行期）
 
 结果：**没有原生库时，应用照常运行，只是广告关掉。**
+
+## 可选组件：优量汇（广告）
+
+优量汇依赖原生库 `libturingad.so`，而它**只有 arm 版本**（armeabi / armeabi-v7a /
+arm64-v8a），没有 x86 / x86_64。所以它天然是"小众架构跑不了"的那类依赖。
+
+两种构建方式：
+
+| 命令 | APK | 原生库 | 架构覆盖 |
+|---|---|---|---|
+| `./gradlew :app:assembleRelease` | **4.13 MB** | `libturingad.so`（arm ×3）+ `libandroidx.graphics.path.so`（全 4 种） | arm 完整；x86 靠运行期降级 |
+| `./gradlew :app:assembleRelease -Pca.withGdt=false` | **1.42 MB** | 只有 `libandroidx.graphics.path.so`（全 4 种） | **全架构** |
+
+`-Pca.withGdt=false` 时走 `src/stub/gdt` 的空实现，广告相关代码编译进空壳，
+`BuildConfig.GDT_ENABLED = false`，运行期不会尝试加载原生库。
+
+## 原则：原生库必须可选，小众架构才可用
+
+厂商的原生库永远只覆盖主流 ARM。所以能不能在 x86 / riscv64 / 未来新架构上运行，
+取决于**缺了那个库时应用会不会崩**，而不是取决于库本身。
+
+两层保障：
+
+1. **构建期**：`GDT_ENABLED`（或 `-Pca.withGdt=false`）决定要不要装这个 SDK
+2. **运行期**：`GdtState.ready` + `try/catch (Throwable)` —— 库在但加载失败时降级
+
+实测（把 release APK 的 `lib/**` 全删掉再装到 Android 14）：应用正常启动，
+只是广告关闭。x86 设备就属于这种情况。
+
+### 新增原生库依赖时的检查清单
+
+1. 这个库覆盖哪些 ABI？（`unzip -l xxx.aar | grep .so`）
+2. 缺失时会抛什么？—— `UnsatisfiedLinkError` 是 **Error 不是 Exception**，
+   必须 `catch (Throwable)` 才接得住
+3. 有没有运行期开关让上层跳过相关功能？（参考 `GdtState.ready`）

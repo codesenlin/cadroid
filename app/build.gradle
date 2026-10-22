@@ -16,7 +16,12 @@ def caPasswordFile = file('signatures/release.password')
 //   - 转化（回传）SDK：app/libs/GDTActionSDK.min.1.9.8.aar（本地，不入库）
 // 本地没有那个 aar 时两个都不加载（也就不会出现「投放广告但没有转化回传」的半套状态），
 // 此时用 app/src/stub/gdt 里的空实现编译，并让 BuildConfig.GDT_ENABLED=false 跳过广告逻辑。
-def gdtAvailable = file('libs/GDTActionSDK.min.1.9.8.aar').exists()
+// 优量汇（GDT）是可选组件：
+//  - 默认看本地 aar 在不在
+//  - 也可以用 -Pca.withGdt=false 强制关掉（不装广告 SDK，APK 从 4.13 MB 降到 1.42 MB，
+//    且不再依赖只有 arm 版本的 libturingad.so —— 所有架构都能跑）
+def gdtRequested = (findProperty('ca.withGdt') ?: 'true') != 'false'
+def gdtAvailable = gdtRequested && file('libs/GDTActionSDK.min.1.9.8.aar').exists()
 def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()
 // 加速库：CA 仓库的 caaccel/build.sh 产出。缺失时只是不启用 Java 加速，
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
