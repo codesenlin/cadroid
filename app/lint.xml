@@ -24,4 +24,12 @@
 
     <!-- layout 里 TextView + 图标可以换成 compound drawable：纯布局微优化 -->
     <issue id="UseCompoundDrawables" severity="ignore" />
+    <!-- base-config 允许明文流量：优量汇（GDT）广告 SDK 的素材/上报走 http，
+         收紧成按域名放行需要逐个摸清它的域名列表，风险大于收益 -->
+    <issue id="InsecureBaseConfiguration" severity="ignore" />
+
+    <!-- manifest 里设置了 dataExtractionRules 但没设 fullBackupContent：
+         allowBackup="false" 已经关掉全部备份，这个属性只是给 Android 12+ 的说明，
+         低版本不需要对应配置 -->
+    <issue id="DataExtractionRules" severity="ignore" />
 </lint>

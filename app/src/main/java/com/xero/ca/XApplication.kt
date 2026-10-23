@@ -36,14 +36,25 @@ class XApplication : Application() {
                 android.util.Log.w("CA", "优量汇初始化失败，广告功能关闭: " + t.message)
             }
         }
-        Thread.setDefaultUncaughtExceptionHandler(ErrorCatcher())
+        // 记下系统原来的处理器，崩溃时先自己上报，再交还给它
+        Thread.setDefaultUncaughtExceptionHandler(
+            ErrorCatcher(Thread.getDefaultUncaughtExceptionHandler())
+        )
     }
 
-    inner class ErrorCatcher : Thread.UncaughtExceptionHandler {
+    inner class ErrorCatcher(
+        private val previous: Thread.UncaughtExceptionHandler?,
+    ) : Thread.UncaughtExceptionHandler {
         override fun uncaughtException(t: Thread, e: Throwable) {
             reportError(this@XApplication, t, e)
-            android.os.Process.killProcess(android.os.Process.myPid())
-            exitProcess(0)
+            // 交还给系统处理器：它才会写 tombstone、走正常的崩溃流程
+            // （之前是 killProcess + exitProcess(0)，等于把崩溃伪装成正常退出，
+            //   系统来不及记录，有的机型也不弹崩溃提示）
+            if (previous != null) {
+                previous.uncaughtException(t, e)
+            } else {
+                android.os.Process.killProcess(android.os.Process.myPid())
+            }
         }
     }
 
