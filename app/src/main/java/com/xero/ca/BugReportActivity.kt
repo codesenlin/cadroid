@@ -43,7 +43,9 @@ class BugReportActivity : Activity() {
 
     private fun setClipText(str: String) {
         val cm = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
-        cm?.primaryClip = ClipData.newPlainText("", str)
+        // 不能用 cm?.primaryClip = ...：Kotlin 里 ClipboardManager.primaryClip
+        // 被识别成只读属性（val），赋值编译不过（'val' cannot be reassigned）
+        cm?.setPrimaryClip(ClipData.newPlainText("", str))
     }
 
     companion object {
