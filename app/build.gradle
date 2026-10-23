@@ -1,6 +1,4 @@
 apply plugin: 'com.android.application'
-// Kotlin 2.x 起，启用 Compose 必须显式应用编译器插件
-apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 // 脚本（assets/script.js）是用「签名证书 DER 逐字节异或 + GZIP」加密的，
 // 所以签名用的密钥必须和 CA 侧 app/signatures/*.signature 里的证书一致。
@@ -102,8 +100,6 @@ android {
     buildFeatures {
         viewBinding = false
         buildConfig = true
-        // Jetpack Compose（目前只装载依赖与编译链，界面仍是原有 View 体系）
-        compose = true
     }
     dependenciesInfo {
         includeInApk = true
@@ -133,6 +129,8 @@ dependencies {
     }
 
     implementation 'androidx.annotation:annotation:1.11.0'
+    // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
+    implementation 'androidx.core:core-ktx:1.13.1'
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
     implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
@@ -140,15 +138,6 @@ dependencies {
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     implementation 'org.mozilla:rhino-runtime:1.7.15.1'
-
-    // Jetpack Compose —— 用 BOM 统一版本
-    implementation platform('androidx.compose:compose-bom:2025.06.01')
-    implementation 'androidx.compose.ui:ui'
-    implementation 'androidx.compose.ui:ui-graphics'
-    implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.activity:activity-compose:1.9.3'
-    debugImplementation 'androidx.compose.ui:ui-tooling'
 }
 
 // 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle
