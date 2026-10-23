@@ -1,5 +1,7 @@
 package com.xero.ca
 
+import androidx.core.content.edit
+
 import android.content.Context
 import android.content.SharedPreferences
 
@@ -23,7 +25,7 @@ class Preference private constructor(context: Context) {
 
     @ScriptObject
     fun setHideSplash(v: Boolean) {
-        mPreferences.edit().putBoolean(SETTING_HIDE_SPLASH, v).apply()
+        mPreferences.edit { putBoolean(SETTING_HIDE_SPLASH, v) }
     }
 
     @ScriptObject
@@ -31,7 +33,7 @@ class Preference private constructor(context: Context) {
 
     @ScriptObject
     fun setHideNotification(v: Boolean) {
-        mPreferences.edit().putBoolean(SETTING_HIDE_NOTIFICATION, v).apply()
+        mPreferences.edit { putBoolean(SETTING_HIDE_NOTIFICATION, v) }
     }
 
     @ScriptObject
@@ -39,7 +41,7 @@ class Preference private constructor(context: Context) {
 
     @ScriptObject
     fun setBootStart(v: Boolean) {
-        mPreferences.edit().putBoolean(SETTING_START_ON_BOOT, v).apply()
+        mPreferences.edit { putBoolean(SETTING_START_ON_BOOT, v) }
     }
 
     fun getDebugSource(): String = mPreferences.getString("debugSource", "") ?: ""
@@ -47,7 +49,7 @@ class Preference private constructor(context: Context) {
     fun checkFirstRun(): Boolean {
         val result = !mPreferences.contains(SETTING_FIRST_RUN)
         if (result) {
-            mPreferences.edit().putBoolean(SETTING_FIRST_RUN, false).apply()
+            mPreferences.edit { putBoolean(SETTING_FIRST_RUN, false) }
         }
         return result
     }
@@ -56,7 +58,7 @@ class Preference private constructor(context: Context) {
         var uuid = mPreferences.getString(SETTING_USER_ID, null)
         if (uuid == null) {
             uuid = UUID.randomUUID().toString()
-            mPreferences.edit().putString(SETTING_USER_ID, uuid).apply()
+            mPreferences.edit { putString(SETTING_USER_ID, uuid) }
         }
         return uuid
     }

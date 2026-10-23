@@ -1,5 +1,7 @@
 package com.xero.ca
 
+import android.annotation.SuppressLint
+
 import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
@@ -219,6 +221,9 @@ class AdProvider {
         /** 广告从开始请求到展示的最长等待时间，超时后按“没有广告”处理，避免一直卡在启动页 */
         private const val AD_FETCH_TIMEOUT_MS = 10000
 
+        // 单例持有 ViewGroup 会被 lint 判为 StaticFieldLeak。
+        // 实际不会泄漏：release() 里会把 mContainer / mActivity 全部置空（见第 137 行）。
+        @SuppressLint("StaticFieldLeak")
         private val sInstance = AdProvider()
 
         @JvmStatic
