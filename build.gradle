@@ -25,5 +25,6 @@ allprojects {
 }
 
 tasks.register('clean', Delete) {
-    delete rootProject.buildDir
+    // Gradle 9 起 Project.buildDir 弃用，改用 layout.buildDirectory（Provider）
+    delete rootProject.layout.buildDirectory
 }

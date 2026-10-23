@@ -45,9 +45,10 @@ android {
                 keyAlias 'testkey'
                 keyPassword caPasswordFile.text.trim()
                 // 附加 V3 签名（APK Signature Scheme v3），v1/v2 一并保留以兼容旧系统
-                enableV1Signing true
-                enableV2Signing true
-                enableV3Signing true
+                // Gradle 10 起必须用赋值语法；旧写法 enableV1Signing true 已弃用
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }

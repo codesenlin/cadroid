@@ -71,7 +71,7 @@ class RhinoAndroidHelper private constructor(private val cacheDirectory: File) {
         val factory: AndroidContextFactory
         if (!ContextFactory.hasExplicitGlobal()) {
             factory = AndroidContextFactory(cacheDirectory)
-            ContextFactory.getGlobalSetter().setContextFactoryGlobal(factory)
+            ContextFactory.getGlobalSetter().contextFactoryGlobal = factory
         } else if (ContextFactory.getGlobal() !is AndroidContextFactory) {
             throw IllegalStateException(
                 "Cannot initialize factory for Android Rhino: There is already another factory"

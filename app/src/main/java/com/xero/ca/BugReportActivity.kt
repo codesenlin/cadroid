@@ -43,7 +43,7 @@ class BugReportActivity : Activity() {
 
     private fun setClipText(str: String) {
         val cm = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
-        cm?.setPrimaryClip(ClipData.newPlainText("", str))
+        cm?.primaryClip = ClipData.newPlainText("", str)
     }
 
     companion object {

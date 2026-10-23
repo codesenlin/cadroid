@@ -91,7 +91,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="cbassistant" />
+                <data android:scheme="assistant" />
             </intent-filter>
         </activity>
         <activity android:name=".PermissionRequestActivity"
@@ -125,7 +125,7 @@
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data
-                android:name="android.accessibilityservice"
+                android:name="android.accessibility-service"
                 android:resource="@xml/accessible_service_config" />
         </service>
         <!-- GameBridge 由运行在游戏进程里的适配器（其他 App）通过 bindService 绑定，
