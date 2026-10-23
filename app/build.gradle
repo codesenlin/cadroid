@@ -20,14 +20,14 @@ def caPasswordFile = file('signatures/release.password')
 //    且不再依赖只有 arm 版本的 libturingad.so —— 所有架构都能跑）
 def gdtRequested = (findProperty('ca.withGdt') ?: 'true') != 'false'
 def gdtAvailable = gdtRequested && file('libs/GDTActionSDK.min.1.9.8.aar').exists()
-def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar').exists()
+def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar').exists()
 // 加速库：CA 仓库的 caaccel/build.sh 产出。缺失时只是不启用 Java 加速，
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
 def caaccelAvailable = file('libs/caaccel.jar').exists()
 
 android {
     namespace = 'com.xero.ca'
-    compileSdk = 35
+    compileSdk = 36
 
     compileOptions {
         coreLibraryDesugaringEnabled = true
@@ -110,17 +110,17 @@ android {
 
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.2'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 
     // 本地依赖不入库（见 app/libs/.gitignore）；缺失时用 src/stub 下的空实现编译（见 sourceSets）
     if (tdAvailable) {
-        implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.38.jar')
+        implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar')
     }
 
     if (gdtAvailable) {
         // 广告 SDK 与转化 SDK 配套：有 aar 就两个都加载，没有就两个都不加载
         implementation files('libs/GDTActionSDK.min.1.9.8.aar')
-        implementation 'com.qq.e.union:union:4.710.1580'
+        implementation 'com.qq.e.union:union:4.712.1582'
     }
 
     // 命令助手高性能加速库（源码在 CA 仓库的 caaccel/，用 caaccel/build.sh 构建）
@@ -131,7 +131,7 @@ dependencies {
 
     implementation 'androidx.annotation:annotation:1.11.0'
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
-    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.core:core-ktx:1.16.0'
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
     implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
