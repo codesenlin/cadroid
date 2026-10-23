@@ -76,16 +76,6 @@ android {
             jniDebuggable false
             multiDexEnabled = true
         }
-        // 测试版：不混淆、不裁资源（便于看堆栈和反查），只改包名 com.xero.ca.debug，
-        // 用同一张证书 + V3 签名，可以直接安装、与 com.xero.ca 共存。
-        // 代价：dex 不能像 release 那样收到 2 个，会按方法数拆成多个。
-        trial {
-            initWith release
-            minifyEnabled false
-            shrinkResources false
-            applicationIdSuffix ".debug"
-            signingConfig signingConfigs.findByName('ca') ?: signingConfigs.debug
-        }
     }
     sourceSets {
         main {
