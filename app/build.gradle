@@ -31,8 +31,9 @@ android {
 
     compileOptions {
         coreLibraryDesugaringEnabled = true
-        sourceCompatibility 17
-        targetCompatibility 17
+        // 语言级别 21（Gradle 守护进程本身跑 JDK 25，见 gradle-daemon-jvm.properties）
+        sourceCompatibility JavaVersion.VERSION_24
+        targetCompatibility JavaVersion.VERSION_24
     }
 
     signingConfigs {
