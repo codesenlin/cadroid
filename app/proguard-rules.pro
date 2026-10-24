@@ -79,3 +79,10 @@
 # 本项目用 -1 纯解释执行，永远不走那条路径，所以放行 R8 的缺失类检查。
 -dontwarn jdk.dynalink.**
 -dontwarn java.lang.StackWalker
+
+# Rhino 的 E4X 实现通过 ServiceLoader 加载（META-INF/services/
+# org.mozilla.javascript.xml.XMLLoader → XMLLoaderImpl）。
+# 核心 jar 里没有任何对 xmlimpl 的静态引用，不 keep 会被 R8 删光，
+# 脚本里 XML() 和 <a/> 字面量就会报 "XML 未定义"。
+-keep class org.mozilla.javascript.xmlimpl.XMLLoaderImpl { *; }
+-keepnames class org.mozilla.javascript.xml.** { *; }

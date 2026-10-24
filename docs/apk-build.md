@@ -2,11 +2,11 @@
 
 ## 当前产物形态
 
-| 命令 | 产物 | 用途 |
-|---|---|---|
-| `./gradlew :app:assembleRelease` | `app/build/outputs/apk/release/app-release-unsigned.apk` | 通用 APK（含全部 ABI） |
-| `./gradlew :app:bundleRelease` | `app/build/outputs/bundle/release/app-release.aab` | App Bundle，供 Google Play 上架 |
-| `./tools/build-apks.sh` | `build/dist/命令助手.apks` | 由 AAB 拆出的分体包 |
+| 命令                             | 产物                                                     | 用途                            |
+|----------------------------------|----------------------------------------------------------|---------------------------------|
+| `./gradlew :app:assembleRelease` | `app/build/outputs/apk/release/app-release-unsigned.apk` | 通用 APK（含全部 ABI）          |
+| `./gradlew :app:bundleRelease`   | `app/build/outputs/bundle/release/app-release.aab`       | App Bundle，供 Google Play 上架 |
+| `./tools/build-apks.sh`          | `build/dist/命令助手.apks`                               | 由 AAB 拆出的分体包             |
 
 正式包仍由 CA 的 `cabuildtools shellBuildRelease` 产出（对 APK 签名 + 放进 `build/dist`）。
 
@@ -14,11 +14,11 @@
 
 `bundletool get-size total --dimensions=ABI`：
 
-| 目标 ABI | 下载体积 |
-|---|---|
-| arm64-v8a | 4.04 MB |
-| armeabi-v7a | 4.03 MB |
-| x86 | 3.90 MB |
+| 目标 ABI    | 下载体积 |
+|-------------|----------|
+| arm64-v8a   | 4.04 MB  |
+| armeabi-v7a | 4.03 MB  |
+| x86         | 3.90 MB  |
 
 对照通用 APK：**4.13 MB**。
 
@@ -83,10 +83,10 @@ arm64-v8a），没有 x86 / x86_64。所以它天然是"小众架构跑不了"�
 
 两种构建方式：
 
-| 命令 | APK | 原生库 | 架构覆盖 |
-|---|---|---|---|
-| `./gradlew :app:assembleRelease` | **4.13 MB** | `libturingad.so`（arm ×3）+ `libandroidx.graphics.path.so`（全 4 种） | arm 完整；x86 靠运行期降级 |
-| `./gradlew :app:assembleRelease -Pca.withGdt=false` | **1.42 MB** | 只有 `libandroidx.graphics.path.so`（全 4 种） | **全架构** |
+| 命令                                                | APK         | 原生库                                                                | 架构覆盖                   |
+|-----------------------------------------------------|-------------|-----------------------------------------------------------------------|----------------------------|
+| `./gradlew :app:assembleRelease`                    | **4.13 MB** | `libturingad.so`（arm ×3）+ `libandroidx.graphics.path.so`（全 4 种） | arm 完整；x86 靠运行期降级 |
+| `./gradlew :app:assembleRelease -Pca.withGdt=false` | **1.42 MB** | 只有 `libandroidx.graphics.path.so`（全 4 种）                        | **全架构**                 |
 
 `-Pca.withGdt=false` 时走 `src/stub/gdt` 的空实现，广告相关代码编译进空壳，
 `BuildConfig.GDT_ENABLED = false`，运行期不会尝试加载原生库。

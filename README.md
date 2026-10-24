@@ -14,11 +14,11 @@
 
 ### 相关仓库
 
-| 仓库 | 说明 |
-| --- | --- |
-| <https://github.com/codesenlin/CA> | 本 fork 的核心脚本（构建 APK 前需要先构建它，见下） |
-| <https://gitee.com/projectxero/ca> | 原作者的核心脚本仓库 |
-| <https://github.com/XeroAlpha/cadroid> | 原作者的 Android 壳仓库（本仓库的上游） |
+| 仓库                                   | 说明                                                |
+|----------------------------------------|-----------------------------------------------------|
+| <https://github.com/codesenlin/CA>     | 本 fork 的核心脚本（构建 APK 前需要先构建它，见下） |
+| <https://gitee.com/projectxero/ca>     | 原作者的核心脚本仓库                                |
+| <https://github.com/XeroAlpha/cadroid> | 原作者的 Android 壳仓库（本仓库的上游）             |
 
 ## 构建
 
@@ -99,11 +99,11 @@ cp app/src/main/java/config/template/Secret.java \
 然后在 `config/local/Secret.java` 里按注释填写需要的条目——**每条都允许为空**，空条目会自动
 回退，不影响其它条目。
 
-| 优先级 | 文件 | 说明 |
-| --- | --- | --- |
-| 1 | `config/local/Secret.java` | **本机私人配置**（`config/.gitignore` 已忽略，可选） |
-| 2 | `config/standard/Secret.java` | **默认配置**：CA 原作者公开的那份值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth 凭据） |
-| 3 | `config/template/Secret.java` | **模板**：全部留空，兜底 |
+| 优先级 | 文件                          | 说明                                                                                            |
+|--------|-------------------------------|-------------------------------------------------------------------------------------------------|
+| 1      | `config/local/Secret.java`    | **本机私人配置**（`config/.gitignore` 已忽略，可选）                                            |
+| 2      | `config/standard/Secret.java` | **默认配置**：CA 原作者公开的那份值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth 凭据） |
+| 3      | `config/template/Secret.java` | **模板**：全部留空，兜底                                                                        |
 
 **合并是按条目（每个 getter）来的，不是整份文件**：例如只填了 TalkingData token、其余留空，
 那么广告 AppID / 广告位 / Gitee 那几项会各自回退到默认配置的值；某一条在默认里也是空，
