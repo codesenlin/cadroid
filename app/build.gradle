@@ -138,7 +138,8 @@ dependencies {
     implementation 'org.java-websocket:Java-WebSocket:1.6.0'
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
-    implementation 'org.mozilla:rhino-runtime:1.7.15.1'
+    // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
+    implementation 'org.mozilla:rhino:1.9.1'
 }
 
 // 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle

@@ -73,3 +73,9 @@
 # 加速库：只被核心脚本通过 Rhino 反射（Packages.top.projectxero.ca.accel.Accel）调用，
 # Java 侧没有任何静态引用，R8 会把它整个裁掉，必须显式保留
 -keep class top.projectxero.ca.accel.** { *; }
+
+# ---- Rhino 1.9 ----
+# 这些类 Android 上不存在，但只在"编译模式"（optimizationLevel >= 0）里用到。
+# 本项目用 -1 纯解释执行，永远不走那条路径，所以放行 R8 的缺失类检查。
+-dontwarn jdk.dynalink.**
+-dontwarn java.lang.StackWalker

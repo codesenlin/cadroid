@@ -219,10 +219,26 @@ class ScriptManager private constructor() {
     inner class PrepareCommand(private val runAfterPrepared: Boolean) : Runnable {
         override fun run() {
             Looper.prepare()
-            scriptInterface = initScriptInterface()
-            cx = initContext()
-            scope = initScope(cx!!)
-            handler = Handler()
+            // 引擎初始化放在 try 里：Rhino 1.9 用到的 jdk.dynalink / StackWalker 在
+            // Android 上不存在，正常情况下（-1 纯解释）不会加载到它们，但万一触发，
+            // 抛的是 ExceptionInInitializerError（Error 不是 Exception），这里必须接住，
+            // 否则直接崩在启动阶段。
+            try {
+                scriptInterface = initScriptInterface()
+                cx = initContext()
+                scope = initScope(cx!!)
+                handler = Handler()
+            } catch (t: Throwable) {
+                Log.e("Script", "脚本引擎初始化失败", t)
+                val ctx = bindContext
+                if (ctx != null) {
+                    XApplication.reportError(
+                        ctx.applicationContext, Thread.currentThread(),
+                        IllegalStateException("脚本引擎初始化失败（Rhino 运行时不可用）", t)
+                    )
+                }
+                return
+            }
             try {
                 val time = SystemClock.uptimeMillis()
                 compiledScript = getCompiledScript()
