@@ -1,4 +1,4 @@
-package config.standard;
+package com.xero.ca.config.standard;
 
 import android.util.Base64;
 
@@ -14,10 +14,10 @@ import android.util.Base64;
  * 热更新校验公钥是例外：必须配我们自己的 privateKey.pem（CA 的 shellWriteHotfixSign
  * 用它签名），所以这里不是作者那把。
  *
- * 用法：把本文件复制成 app/src/main/java/config/local/Secret.java 填自己的值即可
+ * 用法：把本文件复制成 app/src/main/java/com/xero/ca/config/local/Secret.java 填自己的值即可
  * （那个路径已被 .gitignore 忽略，不会被提交）。合并是**逐条**的：某个 getter 在
- * 私人文件里返回空字符串，就单独回退到 config/config/standard/Secret.java 的对应值；默认那条也是空，
- * 才落回 config/config/template/Secret.java 的空实现。合并逻辑见 app/secret-config.gradle，
+ * 私人文件里返回空字符串，就单独回退到 com/xero/ca/config/standard/Secret.java 的对应值；默认那条也是空，
+ * 才落回 com/xero/ca/config/template/Secret.java 的空实现。合并逻辑见 app/secret-config.gradle，
  * 生成 com/xero/ca/gen/Secret.java 参与编译。
  */
 public class Secret {

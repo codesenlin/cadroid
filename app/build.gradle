@@ -94,7 +94,7 @@ android {
                 java.srcDir 'src/stub/gdt'
             }
             // 三份配置文件只当数据源，由 secret-config.gradle 合并生成 com/xero/ca/gen/Secret.java
-            java.exclude 'config/**'
+            java.exclude 'com/xero/ca/config/**'
             java.srcDir layout.buildDirectory.dir('generated/source/secret').get().asFile
         }
     }
