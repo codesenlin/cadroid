@@ -18,7 +18,9 @@ import com.xero.ca.script.RhinoWebSocketServerHelper
 import com.xero.ca.script.RhinoWebView
 import com.xero.ca.script.ScriptObject
 
+import org.mozilla.javascript.NativeJavaObject
 import org.mozilla.javascript.Scriptable
+import org.mozilla.javascript.lc.type.TypeInfoFactory
 
 import java.io.File
 import java.io.IOException
@@ -205,6 +207,17 @@ class ScriptInterface(manager: ScriptManager) {
     @Throws(IOException::class)
     fun compileICode(source: String, sourceName: String?, hash: ByteArray): ByteArray =
         mManager.compileICode(source, sourceName, hash)
+
+    /**
+     * 把 JS 对象包成"静态类型为 Scriptable"的 NativeJavaObject。
+     *
+     * 脚本用它调内部方法（get/put/delete/has 等）来模拟 Proxy。
+     * Rhino 1.7 可以直接 `new NativeJavaObject(scope, obj, Scriptable)`，
+     * 1.9 的第三个参数换成了 TypeInfo，而且脚本里 `Class.forName(...)`
+     * 在反射调用下会走引导类加载器、找不到应用类，所以放在这里做。
+     */
+    fun wrapAsScriptable(obj: Any?, scope: Scriptable?): Any? =
+        NativeJavaObject(scope, obj, TypeInfoFactory.GLOBAL.create(Scriptable::class.java))
 
     fun getUserID(): String = mPreference.getUserId()
 
