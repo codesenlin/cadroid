@@ -112,6 +112,18 @@
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|smallestScreenSize|keyboard|keyboardHidden|screenLayout" />
 
+        <!-- 优量汇的下载服务：SDK 自己声明的是 android:multiprocess="true"，
+             效果是"在调用它的进程里运行"= 我们的主进程。它做网络下载，
+             一旦慢就阻塞主线程，实测触发过 ANR：
+               Reason: executing service com.xero.ca/com.qq.e.comm.DownloadService
+             把它固定到独立进程后，即使它卡住也不影响主界面。 -->
+        <service
+            android:name="com.qq.e.comm.DownloadService"
+            android:process=":gdt"
+            android:multiprocess="false"
+            tools:node="merge"
+            tools:replace="android:multiprocess" />
+
         <service android:name=".ScriptService"
             android:foregroundServiceType="specialUse">
             <property
