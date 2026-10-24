@@ -81,7 +81,6 @@ class MCAdapter(
         try {
             send(bundle)
         } catch (e: RemoteException) {
-            //do nothing
         }
     }
 
@@ -111,7 +110,6 @@ class MCAdapter(
         try {
             send(bundle)
         } catch (e: RemoteException) {
-            //do nothing
         }
     }
 
