@@ -27,5 +27,11 @@ local.properties
 # ===== 项目特有的敏感文件 =====
 /export.bat
 
+# ===== 日志 / 系统 / 编辑器 =====
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+
 # bundletool（32 MB，按需下载，见 tools/build-apks.sh 头部注释）
 tools/bundletool.jar
