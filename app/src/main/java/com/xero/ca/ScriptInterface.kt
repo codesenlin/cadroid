@@ -150,6 +150,40 @@ class ScriptInterface(manager: ScriptManager) {
     /** 当前脚本引擎名（"Rhino" / "QuickJS"），排查回退问题时用。 */
     fun getScriptEngine(): String = mManager.getEngine().name
 
+    /** HTTP 回调（脚本侧用 JS 对象实现）。 */
+    interface HttpCallback {
+        fun onDone(error: String?, body: String?)
+    }
+
+    /**
+     * 异步 GET：脚本在 QuickJS 下跑在主线程，同步网络会卡主线程（ANR）。
+     * 这个接口在后台线程请求，完成后回调脚本（回调会 marshal 回 JS 线程）。
+     */
+    fun httpGetAsync(url: String, callback: HttpCallback?) {
+        val cb: HttpCallback = callback ?: return
+        val reqUrl = url
+        Thread(object : Runnable {
+            override fun run() {
+                var error: String? = null
+                var body: String? = null
+                try {
+                    val conn = java.net.URL(reqUrl).openConnection()
+                    conn.connectTimeout = 5000
+                    conn.readTimeout = 5000
+                    (conn as? java.net.HttpURLConnection)?.requestMethod = "GET"
+                    body = conn.getInputStream().bufferedReader().use { it.readText() }
+                } catch (t: Throwable) {
+                    error = t.toString()
+                }
+                try {
+                    cb.onDone(error, body)
+                } catch (t: Throwable) {
+                    android.util.Log.w("Script", "httpGetAsync 回调失败", t)
+                }
+            }
+        }, "CA-http").start()
+    }
+
     fun getShellVersion(): Int = BuildConfig.SHELL_VERSION
 
     fun getVersionCode(): Int = BuildConfig.VERSION_CODE

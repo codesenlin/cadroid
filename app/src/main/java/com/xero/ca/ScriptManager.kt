@@ -33,6 +33,7 @@ class ScriptManager private constructor() {
     private var scope: JsScope? = null
     private var handler: Handler? = null
     private var bindContext: android.content.Context? = null
+    @Volatile
     private var scriptInterface: ScriptInterface? = null
     private var debugFile: String? = null
     private var cacheDir: String? = null
@@ -51,6 +52,9 @@ class ScriptManager private constructor() {
         sourceName = srcName
         // 按 ABI/可用性选引擎：QuickJS 不可用（如 32 位 ARM、小众架构）时自动回退 Rhino
         engine = JsEngines.select(ctx)
+        // 先创建 ScriptInterface：启动页 onSplashActivityCreate 会检查它是否存在，
+        // 晚于启动页创建的话 SplashActivity 会直接 finish，广告回调也就不会触发 startScript。
+        scriptInterface = initScriptInterface()
         val th = Thread(
             Thread.currentThread().threadGroup,
             PrepareCommand(runAfterPrepared),
@@ -184,7 +188,10 @@ class ScriptManager private constructor() {
     private fun initScriptRuntime(): Boolean = try {
         cx = engine.enterContext()
         scope = engine.initScope(cx!!, scriptInterface!!)
-        handler = Handler()
+        handler = if (engine.requiresMainThread) Handler(Looper.getMainLooper()) else Handler()
+        // QuickJS 是单线程的：Java 回调需要 post 回这个 Looper 才能执行 JS
+        val h = handler!!
+        engine.setCallbackDispatcher(Thread.currentThread(), h::post)
         true
     } catch (t: Throwable) {
         lastInitError = t
@@ -202,12 +209,28 @@ class ScriptManager private constructor() {
 
     inner class PrepareCommand(private val runAfterPrepared: Boolean) : Runnable {
         override fun run() {
+            if (engine.requiresMainThread) {
+                // QuickJS：JS 是单线程的，而脚本要大量操作 Android UI（只能在主线程），
+                // 所以整个 JS 生命周期都放到主线程；主线程的 Looper 由系统驱动，不自己 loop。
+                Handler(Looper.getMainLooper()).post(Runnable {
+                    if (prepareOnCurrentThread(runAfterPrepared)) {
+                        Log.i("Script", "脚本引擎 ${engine.name} 在主线程上运行")
+                    }
+                })
+                return
+            }
             Looper.prepare()
+            if (!prepareOnCurrentThread(runAfterPrepared)) return
+            Looper.loop()
+            shutdownRuntime()
+        }
+
+        private fun prepareOnCurrentThread(runAfterPrepared: Boolean): Boolean {
             // 引擎初始化放在 try 里：Rhino 1.9 用到的 jdk.dynalink / StackWalker 在
             // Android 上不存在，正常情况下（-1 纯解释）不会加载到它们，但万一触发，
             // 抛的是 ExceptionInInitializerError（Error 不是 Exception），这里必须接住，
             // 否则直接崩在启动阶段。
-            scriptInterface = initScriptInterface()
+            if (scriptInterface == null) scriptInterface = initScriptInterface()
             if (!initScriptRuntime()) {
                 // 运行时才发现不可用（例如 .so 存在但加载失败）：回退 Rhino 再试一次
                 if (engine.name != "Rhino") {
@@ -219,11 +242,11 @@ class ScriptManager private constructor() {
                     engine = RhinoEngine()
                     if (!initScriptRuntime()) {
                         reportEngineError(lastInitError)
-                        return
+                        return false
                     }
                 } else {
                     reportEngineError(lastInitError)
-                    return
+                    return false
                 }
             }
             try {
@@ -231,25 +254,32 @@ class ScriptManager private constructor() {
                 compiledScript = getCompiledScript()
                 Log.d("Script", "Script Compiled in " + (SystemClock.uptimeMillis() - time) + "ms")
             } catch (e: Exception) {
-                val ctx = bindContext ?: return
+                val ctx = bindContext ?: return false
                 XApplication.reportError(
                     ctx.applicationContext, Thread.currentThread(),
                     SecurityException("Fail to decode and execute the script.", e)
                 )
-                return
+                return false
             }
             if (runAfterPrepared) {
                 startScript()
             } else {
                 scriptInterface?.onScriptReady()
             }
-            Looper.loop()
-            engine.exitContext()
-            cx = null
-            scope = null
-            handler = null
-            scriptInterface = null
+            return true
         }
+    }
+
+    /** 释放运行时（Rhino 在 loop 退出后调用；QuickJS 在 ExitCommand 里调用）。 */
+    private fun shutdownRuntime() {
+        try {
+            engine.exitContext()
+        } catch (_: Throwable) {
+        }
+        cx = null
+        scope = null
+        handler = null
+        scriptInterface = null
     }
 
     inner class StartCommand : Runnable {
@@ -266,7 +296,12 @@ class ScriptManager private constructor() {
         override fun run() {
             if (callUnload) callScriptHook("unload", arrayOf())
             scriptInterface?.clearBridge()
-            handler?.looper?.quit()
+            if (engine.requiresMainThread) {
+                // 主线程的 Looper 不能 quit，直接释放引擎
+                shutdownRuntime()
+            } else {
+                handler?.looper?.quit()
+            }
             debugFile = null
         }
     }

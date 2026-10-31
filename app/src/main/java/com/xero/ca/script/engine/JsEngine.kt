@@ -84,4 +84,21 @@ interface JsEngine {
 
     /** 写 iCode；QuickJS 实现里换成 qjsc 字节码。 */
     fun writeICode(script: JsScript, hash: ByteArray): ByteArray
+
+    /**
+     * 告诉引擎哪个线程是 JS 线程，以及怎么把任务 post 过去。
+     *
+     * Rhino 每个线程各自 `Context.enter`，Java 回调在哪个线程直接跑就行（默认 no-op）；
+     * QuickJS 的 context 是单线程的，Java 回调（UI 线程等）必须 marshal 回 JS 线程。
+     */
+    fun setCallbackDispatcher(jsThread: Thread, post: (Runnable) -> Unit) {}
+
+    /**
+     * 是否要求 JS 在 Android 主线程上执行。
+     *
+     * Rhino 是多线程模型（脚本回调可以在任意线程跑），false；
+     * QuickJS 的 context 是单线程的，而脚本大量调用 Android UI（View/Handler），
+     * UI 操作只能在主线程，所以 QuickJS 必须整个生命周期都在主线程。
+     */
+    val requiresMainThread: Boolean get() = false
 }

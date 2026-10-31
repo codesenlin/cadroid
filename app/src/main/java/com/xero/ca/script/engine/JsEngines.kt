@@ -3,6 +3,7 @@ package com.xero.ca.script.engine
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.xero.ca.BuildConfig
 
 /**
  * 引擎选择 / 回退链。
@@ -28,10 +29,14 @@ object JsEngines {
      * E1 接 QuickJS 时把 `QuickJsEngine()` 加到这个列表最前面即可，
      * 回退逻辑不用改。
      */
-    private fun candidates(): List<JsEngine> = listOf(
-        // QuickJsEngine(),   // ← E1：接好绑定后打开
-        RhinoEngine(),
-    )
+    private fun candidates(): List<JsEngine> = buildList {
+        // 只有显式选择了 quickjs（-Pca.jsEngine=quickjs）才把 QuickJS 放进候选，
+        // 否则默认直接 Rhino——E1 阶段的 QuickJS 还跑不了真实脚本。
+        if (BuildConfig.JS_ENGINE.equals("quickjs", ignoreCase = true)) {
+            add(QuickJsEngine())
+        }
+        add(RhinoEngine())
+    }
 
     /** 选一个当前设备可用的引擎；全都不可用时退回 Rhino（理论上不会发生）。 */
     fun select(context: Context): JsEngine {
