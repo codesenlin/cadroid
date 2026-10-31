@@ -147,7 +147,7 @@ class ScriptInterface(manager: ScriptManager) {
     fun createFrameLayout(callback: RhinoFrameLayout.Callback?): RhinoFrameLayout =
         RhinoFrameLayout(mContext, callback)
 
-    /** 当前脚本引擎名（"Rhino" / "QuickJS"），排查回退问题时用。 */
+    /** 当前脚本引擎名（固定 "Rhino"；保留此 API 给脚本兼容）。 */
     fun getScriptEngine(): String = mManager.getEngine().name
 
     // ---------- QuickJS 侧载加速 worker（Rhino 主引擎调用，纯 JS 计算） ----------
@@ -184,46 +184,6 @@ class ScriptInterface(manager: ScriptManager) {
         ) == "true"
     }
 
-    /** HTTP 回调（脚本侧用 JS 对象实现）。 */
-    @androidx.annotation.Keep
-    interface HttpCallback {
-        fun onDone(error: String?, body: String?)
-    }
-
-    /**
-     * 异步 GET：脚本在 QuickJS 下跑在主线程，同步网络会卡主线程（ANR）。
-     * 这个接口在后台线程请求，完成后回调脚本（回调会 marshal 回 JS 线程）。
-     */
-    @androidx.annotation.Keep
-    fun httpGetAsync(url: String, callback: HttpCallback?) {
-        val cb: HttpCallback = callback ?: return
-        Thread(HttpGetTask(url, cb), "CA-http").start()
-    }
-
-    /** HTTP GET 任务（独立类：R8 对匿名内部类的捕获字段处理有问题，实测回调字段会丢成 null）。 */
-    private class HttpGetTask(
-        private val url: String,
-        private val callback: HttpCallback,
-    ) : Runnable {
-        override fun run() {
-            var error: String? = null
-            var body: String? = null
-            try {
-                val conn = java.net.URL(url).openConnection()
-                conn.connectTimeout = 5000
-                conn.readTimeout = 5000
-                (conn as? java.net.HttpURLConnection)?.requestMethod = "GET"
-                body = conn.getInputStream().bufferedReader().use { it.readText() }
-            } catch (t: Throwable) {
-                error = t.toString()
-            }
-            try {
-                callback.onDone(error, body)
-            } catch (t: Throwable) {
-                android.util.Log.w("Script", "httpGetAsync 回调失败", t)
-            }
-        }
-    }
 
     fun getShellVersion(): Int = BuildConfig.SHELL_VERSION
 

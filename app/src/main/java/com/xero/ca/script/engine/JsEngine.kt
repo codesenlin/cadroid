@@ -5,9 +5,9 @@ import java.io.File
 /**
  * 引擎无关的运行时句柄。
  *
- * 这一层是 QuickJS 适配的第一步（E0，见 docs/migration-kotlin-quickjs.md）：
- * `ScriptManager` / `ScriptInterface` 之后只面向这些类型，不再直接引用 Rhino。
- * 当前只有一个实现 [RhinoEngine]；接 QuickJS 时新增 `QuickJsEngine` 即可。
+ * 脚本主引擎目前只有 Rhino（[RhinoEngine]）；QuickJS 不再做完整主引擎，
+ * 只作为纯计算侧载 worker 使用（[QuickJsWorker]，JSON 进出、不接 Java 反射桥）。
+ * 这层抽象保留，方便以后需要时再接新的主引擎实现。
  */
 
 /** 进入线程后的引擎上下文（Rhino 的 Context）。 */
@@ -79,26 +79,10 @@ interface JsEngine {
     /** 把 Java 对象包装成脚本可直接调用的值。 */
     fun wrapAsScriptable(obj: Any?, scope: Any?): Any?
 
-    /** 读 iCode（Rhino 的字节码缓存格式；QuickJS 实现里对应 bytecode）。 */
+    /** 读 iCode（Rhino 的字节码缓存格式）。 */
     fun readICode(iCode: ByteArray, hash: ByteArray?): JsScript?
 
-    /** 写 iCode；QuickJS 实现里换成 qjsc 字节码。 */
+    /** 写 iCode。 */
     fun writeICode(script: JsScript, hash: ByteArray): ByteArray
 
-    /**
-     * 告诉引擎哪个线程是 JS 线程，以及怎么把任务 post 过去。
-     *
-     * Rhino 每个线程各自 `Context.enter`，Java 回调在哪个线程直接跑就行（默认 no-op）；
-     * QuickJS 的 context 是单线程的，Java 回调（UI 线程等）必须 marshal 回 JS 线程。
-     */
-    fun setCallbackDispatcher(jsThread: Thread, post: (Runnable) -> Unit) {}
-
-    /**
-     * 是否要求 JS 在 Android 主线程上执行。
-     *
-     * Rhino 是多线程模型（脚本回调可以在任意线程跑），false；
-     * QuickJS 的 context 是单线程的，而脚本大量调用 Android UI（View/Handler），
-     * UI 操作只能在主线程，所以 QuickJS 必须整个生命周期都在主线程。
-     */
-    val requiresMainThread: Boolean get() = false
 }

@@ -224,6 +224,26 @@ Java 异常消息、Java 侧调 JS 全局函数（`callFunction`）。
 候选：`io.github.taoweiji.quickjs:quickjs-android:1.4.6`（Maven Central，Apache-2.0，
 四种 ABI，提供 `JSFunction.call` / `registerJavaMethod` / `addJavascriptInterface`）。
 
+### E2.17：QuickJS 只做侧载后的代码收尾（2026-10-31 下午）
+
+确认「QuickJS 只做纯计算侧载」后，把主引擎时代的死代码/分支全部清掉：
+
+**cadroid**
+- `JsEngine` 接口删除 QuickJS 时代的 `setCallbackDispatcher` / `requiresMainThread`
+- `ScriptManager` 删除主线程执行分支（handler 直接 `Handler()`、Exit 直接 quit Looper）
+- 删除 `JsEngines` 选择器（主引擎固定 `RhinoEngine()`，不再按 ABI/健康状态挑引擎）
+- 删除 `ScriptInterface.httpGetAsync` / `HttpCallback`（只有 QuickJS 主线程路径用）
+
+**CA 脚本**
+- `Threads`：删除 `isQuickJS` 全部判断，`await*/awaitPromise` 还原纯 Rhino 语义
+- `Updater`：删除 QuickJS 下跳过启动更新检查
+- `PushService`：删除 QuickJS 异步标签分支（还原 Rhino 原有 progress.async 路径）
+- `CA.initialize`：删除 QuickJS 回调式协议分支（`initializeAfterAgreement` 仍保留，
+  供「恢复默认数据」等运行时重建场景复用）
+- 相关注释里的 QuickJS 措辞一并更新
+
+验证：构建通过；真机 Rhino 启动正常、worker 可用（quickjs-kt 16KB）、无崩溃/ANR。
+
 ### E2.16：改用 quickjs-kt（16KB、社区维护）替代自编译版（2026-10-31 下午）
 
 E2.15 自编译的极简 JNI 已验证可用（40x），但社区里后来发现

@@ -7,7 +7,6 @@ import android.util.Log
 import com.xero.ca.script.engine.JsContext
 import com.xero.ca.script.engine.JsEngine
 import com.xero.ca.script.engine.JsScope
-import com.xero.ca.script.engine.JsEngines
 import com.xero.ca.script.engine.JsScript
 import com.xero.ca.script.engine.RhinoEngine
 import java.io.File
@@ -50,9 +49,8 @@ class ScriptManager private constructor() {
         running = true
         bindContext = ctx
         sourceName = srcName
-        // 双引擎：auto 模式下 QuickJS 可靠时优先（加速），状态不好则 Rhino 兜底。
-        // 不可用设备（如 32 位 ARM、小众 ABI）JsEngines 内部自动回退 Rhino。
-        engine = JsEngines.select(ctx)
+        // 主引擎只有 Rhino（反射/UI 密集逻辑最快）；纯 JS 计算走 QuickJsWorker 侧载。
+        engine = RhinoEngine()
         // 先创建 ScriptInterface：启动页 onSplashActivityCreate 会检查它是否存在，
         // 晚于启动页创建的话 SplashActivity 会直接 finish，广告回调也就不会触发 startScript。
         scriptInterface = initScriptInterface()
@@ -197,10 +195,7 @@ class ScriptManager private constructor() {
     private fun initScriptRuntime(): Boolean = try {
         cx = engine.enterContext()
         scope = engine.initScope(cx!!, scriptInterface!!)
-        handler = if (engine.requiresMainThread) Handler(Looper.getMainLooper()) else Handler()
-        // QuickJS 是单线程的：Java 回调需要 post 回这个 Looper 才能执行 JS
-        val h = handler!!
-        engine.setCallbackDispatcher(Thread.currentThread(), h::post)
+        handler = Handler()
         true
     } catch (t: Throwable) {
         lastInitError = t
@@ -218,16 +213,6 @@ class ScriptManager private constructor() {
 
     inner class PrepareCommand(private val runAfterPrepared: Boolean) : Runnable {
         override fun run() {
-            if (engine.requiresMainThread) {
-                // QuickJS：JS 是单线程的，而脚本要大量操作 Android UI（只能在主线程），
-                // 所以整个 JS 生命周期都放到主线程；主线程的 Looper 由系统驱动，不自己 loop。
-                Handler(Looper.getMainLooper()).post(Runnable {
-                    if (prepareOnCurrentThread(runAfterPrepared)) {
-                        Log.i("Script", "脚本引擎 ${engine.name} 在主线程上运行")
-                    }
-                })
-                return
-            }
             Looper.prepare()
             if (!prepareOnCurrentThread(runAfterPrepared)) return
             Looper.loop()
@@ -265,7 +250,7 @@ class ScriptManager private constructor() {
         }
     }
 
-    /** 释放运行时（Rhino 在 loop 退出后调用；QuickJS 在 ExitCommand 里调用）。 */
+    /** 释放运行时（Rhino 在脚本线程 loop 退出后调用）。 */
     private fun shutdownRuntime() {
         try {
             engine.exitContext()
@@ -293,12 +278,7 @@ class ScriptManager private constructor() {
         override fun run() {
             if (callUnload) callScriptHook("unload", arrayOf())
             scriptInterface?.clearBridge()
-            if (engine.requiresMainThread) {
-                // 主线程的 Looper 不能 quit，直接释放引擎
-                shutdownRuntime()
-            } else {
-                handler?.looper?.quit()
-            }
+            handler?.looper?.quit()
             debugFile = null
         }
     }
