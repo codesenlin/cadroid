@@ -25,7 +25,7 @@
 | P2   | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | ✅ 2 个提交  |
 | P3   | 4 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353 / AnalyticsPlatform 52）    | ✅ 3 个提交  |
 | P4   | 6 个类加载器（com/faendir/rhino_android/*）                                                                | ✅ 2 个提交  |
-| P5   | 同步到 CA_Reforged/cadroid 并推送                                                                          | 待做         |
+| P5   | 同步到 CA_Reforged/cadroid 并推送                                                                          | ✅ 已并入 subtree 方案（见下方进度更新） |
 
 **结果：36 个应用代码文件全部 Kotlin 化，8 个 Java 刻意保留（stub 5 + config 模板 2 + javax 1）。**
 
@@ -118,3 +118,40 @@ QuickJS 换上去之后，必须自己实现：
 
 Kotlin 的 P1/P2 与引擎无关，可以继续做完；**P3（ScriptInterface / ScriptManager）
 必须等 E0**，否则要迁移两遍。
+
+
+## 四、进度更新（2026-10-30）
+
+### P5：已不需要单独做
+
+CA_Reforged 已从 submodule 改成 **git subtree**，`cadroid/` 直接是真实文件；
+以后同步用：
+
+```bash
+git subtree pull --prefix=cadroid https://github.com/codesenlin/cadroid.git main --squash
+```
+
+### E0 第一步：✅ 完成
+
+新增 `app/src/main/java/com/xero/ca/script/engine/`：
+
+| 文件 | 内容 |
+|------|------|
+| `JsEngine.kt` | 引擎无关的抽象：`JsContext` / `JsScope` / `JsScript` 句柄 + `JsEngine` 接口（enterContext / initScope / compile / execute / callFunction / wrapAsScriptable / iCode 缓存） |
+| `RhinoEngine.kt` | `JsEngine` 的 Rhino 实现：把原来散在 `ScriptManager`、`ScriptInterface` 里的 Rhino 细节（Context 参数、WrapFactory、Kit/缓存序列化、NativeJavaObject 包装、StackStyle / emptyArgs 补丁）全部收进来 |
+
+`ScriptManager` 和 `ScriptInterface` **已经不再 import 任何 `org.mozilla.*`**，
+行为与迁移前一致，`./gradlew :app:assembleDebug` 通过。
+
+### 下一步：E1（QuickJS 最小可用）
+
+1. 选绑定：`jmir1/quickjs-android`（维护活跃、支持 Android）
+2. 新增 `QuickJsEngine`，先实现 `enterContext` / `initScope` / `compile` / `execute`
+3. 跑同一份脚本，验证 `ScriptInterface` 的 `@ScriptObject` 方法能被 JS 调到
+4. 这一步不用碰 `java` / `android` 命名空间（那是 E2 的桥）
+
+### 还留在 Rhino 上的部分（E2 范围）
+
+- `script/RhinoFrameLayout.kt`、`RhinoWebView.kt`、`RhinoWebSocketClientHelper.kt`、
+  `RhinoWebSocketServerHelper.kt`、`WrappedUndefined.kt` —— 都直接继承 Rhino 的类型
+- `com/faendir/rhino_android/*` 五个类加载器

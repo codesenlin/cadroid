@@ -4,15 +4,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.Function
-import org.mozilla.javascript.Kit
-import org.mozilla.javascript.RhinoException
-import org.mozilla.javascript.Script
-import org.mozilla.javascript.ScriptRuntime
-import org.mozilla.javascript.Scriptable
-import org.mozilla.javascript.StackStyle
-import org.mozilla.javascript.WrapFactory
+import com.xero.ca.script.engine.JsContext
+import com.xero.ca.script.engine.JsEngine
+import com.xero.ca.script.engine.JsScope
+import com.xero.ca.script.engine.JsScript
+import com.xero.ca.script.engine.RhinoEngine
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileReader
@@ -23,15 +19,17 @@ import java.io.Reader
 import java.lang.ref.WeakReference
 
 /**
- * 脚本引擎的管理者：负责创建 Rhino Context、加载/编译脚本、在独立线程里跑事件循环。
+ * 脚本引擎的管理者：负责加载/编译脚本、在独立线程里跑事件循环。
  *
- * 注意：这里有几个 Rhino 内部 API 的用法（StackStyle、Context.emptyArgs 反射补丁、
- * Kit.readReader），换引擎时这一整个类都要重写。
+ * E0（见 docs/migration-kotlin-quickjs.md）：这里已经不再直接引用 Rhino，
+ * 引擎相关的东西都收在 [JsEngine] / [RhinoEngine] 里；换 QuickJS 时只要换
+ * [engine] 的实现。
  */
 class ScriptManager private constructor() {
 
-    private var cx: Context? = null
-    private var scope: Scriptable? = null
+    private var engine: JsEngine = RhinoEngine()
+    private var cx: JsContext? = null
+    private var scope: JsScope? = null
     private var handler: Handler? = null
     private var bindContext: android.content.Context? = null
     private var scriptInterface: ScriptInterface? = null
@@ -42,7 +40,7 @@ class ScriptManager private constructor() {
     @Volatile
     private var running = false
     private var sourceName: String? = null
-    private var compiledScript: Script? = null
+    private var compiledScript: JsScript? = null
 
     @Synchronized
     fun prepareScript(ctx: android.content.Context, srcName: String, runAfterPrepared: Boolean) {
@@ -82,15 +80,8 @@ class ScriptManager private constructor() {
     @Synchronized
     fun callScriptHook(name: String, args: Array<Any?>) {
         handler ?: return
-        val s = scope ?: return
-        val obj = s.get(name, s)
-        if (obj is Function) {
-            try {
-                obj.call(cx, s, s, args)
-            } catch (ex: Exception) {
-                //Ignore this exception
-            }
-        }
+        val c = cx ?: return
+        engine.callFunction(c, scope, name, args)
     }
 
     fun setHotfix(coreFile: String, signFile: String, verify: ByteArray, versionCode: Int) {
@@ -101,21 +92,29 @@ class ScriptManager private constructor() {
         this.cacheDir = cacheDir
     }
 
-    private fun initContext(): Context {
-        val context = com.faendir.rhino_android.RhinoAndroidHelper().enterContext()
-        context.setOptimizationLevel(-1)
-        context.setLanguageVersion(Context.VERSION_ES6)
-        return context
-    }
+    /** 当前使用的脚本引擎（E3 双引擎切换时从这里换）。 */
+    fun getEngine(): JsEngine = engine
 
-    private fun initScope(cx: Context): Scriptable {
-        val wrapFactory: WrapFactory = cx.wrapFactory
-        val s = cx.initStandardObjects()
-        s.put(
-            "ScriptInterface", s,
-            wrapFactory.wrapAsJavaObject(cx, s, getScriptInterface(), ScriptInterface::class.java)
-        )
-        return s
+    fun getContext(): JsContext? = cx
+
+    fun getScope(): JsScope? = scope
+
+    fun getBindContext(): android.content.Context? = bindContext
+
+    fun getScriptInterface(): ScriptInterface? = scriptInterface
+
+    fun getHandler(): Handler? = handler
+
+    @Throws(IOException::class)
+    fun open(path: String): InputStream? {
+        val file = debugFile
+        if (file != null) {
+            val src = File(file)
+            return FileInputStream(File(src.parent, path))
+        } else if (bindContext != null) {
+            return bindContext!!.assets.open(path)
+        }
+        return null
     }
 
     private fun initScriptInterface(): ScriptInterface = ScriptInterface(this)
@@ -141,80 +140,40 @@ class ScriptManager private constructor() {
         return InputStreamReader(ScriptFileStream.fromAsset(bindContext!!, "script.js"))
     }
 
-    fun getContext(): Context? = cx
-
-    fun getScope(): Scriptable? = scope
-
-    fun getBindContext(): android.content.Context? = bindContext
-
-    fun getScriptInterface(): ScriptInterface? = scriptInterface
-
-    fun getHandler(): Handler? = handler
-
     @Throws(IOException::class)
-    fun open(path: String): InputStream? {
-        val file = debugFile
-        if (file != null) {
-            val src = File(file)
-            return FileInputStream(File(src.parent, path))
-        } else if (bindContext != null) {
-            return bindContext!!.assets.open(path)
-        }
-        return null
-    }
-
-    @Throws(IOException::class)
-    private fun getCompiledScript(): Script {
-        val source = getScriptReader().use { reader -> Kit.readReader(reader) }
+    private fun getCompiledScript(): JsScript {
+        val source = getScriptReader().use { it.readText() }
         val cache = cacheDir
-        return if (cache != null && debugFile != null) {
-            cachedCompileScript(source, sourceName, File(cache, "script.obj"))
-        } else {
-            cx!!.compileString(source, sourceName, 0, null)
-        }
-    }
-
-    private fun cachedCompileScript(source: String, sourceName: String?, cacheFile: File): Script {
-        val hash = ScriptFileStream.getStringHash(source)
-        if (cacheFile.exists()) {
-            try {
-                return ScriptFileStream.readScript(cacheFile.path, hash) as Script
-            } catch (e: Exception) {
-                Log.e("Script", "Loading cacheScript failed", e)
-            }
-        }
-        val script = cx!!.compileString(source, sourceName, 0, null)
-        try {
-            ScriptFileStream.writeScript(cacheFile.path, hash, script)
-        } catch (e: IOException) {
-            Log.e("Script", "Write cacheScript failed", e)
-        }
-        return script
+        val cacheFile = if (cache != null && debugFile != null) File(cache, "script.obj") else null
+        return engine.compile(cx!!, source, sourceName, cacheFile)
     }
 
     @Throws(IOException::class, ClassNotFoundException::class)
-    fun executeScriptCache(cacheFile: String, hash: ByteArray?, scope: Scriptable?): Any? {
-        val script = ScriptFileStream.readScript(cacheFile, hash) as Script
-        return script.exec(cx, scope)
+    fun executeScriptCache(cacheFile: String, hash: ByteArray?, scope: Any?): Any? {
+        val script = engine.readScriptCache(File(cacheFile), hash) ?: throw IOException("无法读取脚本缓存: $cacheFile")
+        return engine.execute(cx!!, script, scope)
     }
 
     @Throws(IOException::class)
     fun writeScriptCache(source: String, sourceName: String?, cacheFile: String, hash: ByteArray) {
-        val script = cx!!.compileString(source, sourceName, 0, null)
-        ScriptFileStream.writeScript(cacheFile, hash, script)
+        val script = engine.compile(cx!!, source, sourceName, null)
+        engine.writeScriptCache(File(cacheFile), hash, script)
     }
 
     @Throws(IOException::class, ClassNotFoundException::class)
-    fun executeICode(iCode: ByteArray, hash: ByteArray?, scope: Scriptable?): Any? {
-        val script = ScriptFileStream.readICode(iCode, hash) as Script
-        return script.exec(cx, scope)
+    fun executeICode(iCode: ByteArray, hash: ByteArray?, scope: Any?): Any? {
+        val script = engine.readICode(iCode, hash) ?: throw IOException("无法读取 iCode")
+        return engine.execute(cx!!, script, scope)
     }
 
     @Throws(IOException::class)
     fun compileICode(source: String, sourceName: String?, hash: ByteArray): ByteArray {
-        val script = cx!!.compileString(source, sourceName, 0, null)
-        return ScriptFileStream.writeICode(script, hash)
+        val script = engine.compile(cx!!, source, sourceName, null)
+        return engine.writeICode(script, hash)
     }
+
+    /** 把 Java 对象包装成脚本可直接调用的值（引擎相关，交给 [engine]）。 */
+    fun wrapAsScriptable(obj: Any?, scope: Any?): Any? = engine.wrapAsScriptable(obj, scope)
 
     inner class PrepareCommand(private val runAfterPrepared: Boolean) : Runnable {
         override fun run() {
@@ -225,8 +184,8 @@ class ScriptManager private constructor() {
             // 否则直接崩在启动阶段。
             try {
                 scriptInterface = initScriptInterface()
-                cx = initContext()
-                scope = initScope(cx!!)
+                cx = engine.enterContext()
+                scope = engine.initScope(cx!!, scriptInterface!!)
                 handler = Handler()
             } catch (t: Throwable) {
                 Log.e("Script", "脚本引擎初始化失败", t)
@@ -234,7 +193,7 @@ class ScriptManager private constructor() {
                 if (ctx != null) {
                     XApplication.reportError(
                         ctx.applicationContext, Thread.currentThread(),
-                        IllegalStateException("脚本引擎初始化失败（Rhino 运行时不可用）", t)
+                        IllegalStateException("脚本引擎初始化失败（${engine.name} 运行时不可用）", t)
                     )
                 }
                 return
@@ -257,7 +216,7 @@ class ScriptManager private constructor() {
                 scriptInterface?.onScriptReady()
             }
             Looper.loop()
-            Context.exit()
+            engine.exitContext()
             cx = null
             scope = null
             handler = null
@@ -269,7 +228,7 @@ class ScriptManager private constructor() {
         override fun run() {
             val script = compiledScript
             if (script != null) {
-                script.exec(cx, scope)
+                engine.execute(cx!!, script, scope)
                 compiledScript = null
             }
         }
@@ -297,22 +256,6 @@ class ScriptManager private constructor() {
 
     companion object {
         private var instance: WeakReference<ScriptManager?> = WeakReference(null)
-
-        init {
-            RhinoException.setStackStyle(StackStyle.V8)
-            // hack code
-            if (Context.emptyArgs == null) {
-                try {
-                    val field = Context::class.java.getDeclaredField("emptyArgs")
-                    field.isAccessible = true
-                    field.set(null, ScriptRuntime.emptyArgs)
-                } catch (e: NoSuchFieldException) {
-                    Log.e("CADebug", e.toString())
-                } catch (e: IllegalAccessException) {
-                    Log.e("CADebug", e.toString())
-                }
-            }
-        }
 
         @JvmStatic
         @Synchronized
