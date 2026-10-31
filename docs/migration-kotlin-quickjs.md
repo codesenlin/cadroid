@@ -8,6 +8,9 @@
 > JSON 进/JSON 出、命令库只同步一次；命令联想匹配实测 162ms → ~16ms）。
 > 引擎依赖最终改用 `io.github.dokar3:quickjs-kt-android:1.0.15`（16KB page 对齐）。
 >
+> 完整的"为什么不做主引擎 + 前后性能对比 + 给后来者的验证清单"整理在
+> **[docs/quickjs-sidecar.md](quickjs-sidecar.md)**，迁移细节再往下看。
+>
 > **阅读提示**：下面的 E0-E2.14 章节是探索过程的历史记录，其中出现的
 > `BuildConfig.JS_ENGINE` / `-Pca.jsEngine` / `QuickJsEngine` / `QuickJsBridgeHost` /
 > `quickjs-prelude.js` / `JsEngines` 选择器 / `ScriptHealth` / taoweiji 绑定等，

@@ -152,12 +152,11 @@ dependencies {
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
-    // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
-    implementation 'io.github.dokar3:quickjs-kt-android:1.0.15'
-
     implementation 'org.mozilla:rhino:1.9.2'
     // E4X（XML 字面量）支持：1.8 起从核心拆成独立模块，老脚本可能用到
     implementation 'org.mozilla:rhino-xml:1.9.2'
+    // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
+    implementation 'io.github.dokar3:quickjs-kt-android:1.0.15'
 }
 
 // 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle

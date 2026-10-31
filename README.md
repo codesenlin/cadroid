@@ -122,3 +122,11 @@ Secret 配置（逐条合并）:
 
 热更新校验公钥是公开信息，`standard` / `template` 里都写死同一份（我们自己的那张，配
 `app/signatures/privateKey.pem`），换签名密钥时记得同步。
+
+## 文档
+
+| 文档 | 说明 |
+|---|---|
+| [docs/quickjs-sidecar.md](docs/quickjs-sidecar.md) | **为什么 QuickJS 只做侧载**、前后性能对比、给后来者的验证清单 |
+| [docs/migration-kotlin-quickjs.md](docs/migration-kotlin-quickjs.md) | Kotlin 化 + JS 引擎迁移的完整过程记录（E0-E2.17） |
+| [docs/apk-build.md](docs/apk-build.md) | APK 构建、签名、AAB/16KB 等打包相关说明 |
