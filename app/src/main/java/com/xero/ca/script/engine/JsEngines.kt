@@ -6,34 +6,33 @@ import android.util.Log
 import com.xero.ca.BuildConfig
 
 /**
- * 引擎选择 / 回退链。
+ * 引擎选择 / 回退链（双引擎：QuickJS 加速，Rhino 兜底）。
  *
- * 规则：按 [candidates] 的顺序挑第一个 [JsEngine.isAvailable] 的。
+ * 选择策略（[BuildConfig.JS_ENGINE] 或用户偏好）：
+ *  - `auto`：优先 QuickJS，但【上次 QuickJS 被标记为不可靠】时直接用 Rhino
+ *  - `quickjs`：强制先试 QuickJS（不可用/初始化失败仍会退回 Rhino）
+ *  - `rhino`：只用 Rhino
  *
- * QuickJS 是 native 库（`.so`），不同绑定能提供的 ABI 有限：
- * 常见只有 `arm64-v8a` / `x86_64`，**32 位 ARM（armeabi-v7a）和小众架构
- * （riscv64、mips 等）往往没有可用产物**。这些设备上 [QuickJsEngine.isAvailable]
- * 会返回 false，自动落到 Rhino 上——脚本行为完全一致，只是没有 QuickJS 的性能收益。
+ * QuickJS 是 native 库（`.so`），不同 ABI 产物有限（常见只有 arm64-v8a/x86_64），
+ * 不可用时自动落到 Rhino——脚本行为一致，只是没有 QuickJS 的加速。
  *
- * 所以：
- *  - JS 侧不要依赖"当前是哪个引擎"
- *  - 需要排查时用 `ScriptInterface.getScriptEngine()` 看引擎名
+ * QuickJS 的可靠性状态由 [ScriptHealth] 持久化：
+ * 启动卡顿 / 回调异常 / 初始化失败时会被记为"不可靠"，auto 模式下次启动
+ * 直接走 Rhino；一段时间（或版本更新）后再重新尝试 QuickJS。
  */
 object JsEngines {
 
     private const val TAG = "Script"
 
-    /**
-     * 引擎优先级（越前越优先）。
-     *
-     * E1 接 QuickJS 时把 `QuickJsEngine()` 加到这个列表最前面即可，
-     * 回退逻辑不用改。
-     */
-    private fun candidates(): List<JsEngine> = buildList {
-        // 只有显式选择了 quickjs（-Pca.jsEngine=quickjs）才把 QuickJS 放进候选，
-        // 否则默认直接 Rhino——E1 阶段的 QuickJS 还跑不了真实脚本。
-        if (BuildConfig.JS_ENGINE.equals("quickjs", ignoreCase = true)) {
-            add(QuickJsEngine())
+    /** 引擎优先级（越前越优先），按模式 + 健康状态决定。 */
+    private fun candidates(mode: String, quickJsTrusted: Boolean): List<JsEngine> = buildList {
+        when (mode) {
+            "rhino" -> Unit
+            "quickjs" -> add(QuickJsEngine())
+            else -> {
+                // auto：QuickJS 可靠时才首选它
+                if (quickJsTrusted) add(QuickJsEngine())
+            }
         }
         add(RhinoEngine())
     }
@@ -41,7 +40,10 @@ object JsEngines {
     /** 选一个当前设备可用的引擎；全都不可用时退回 Rhino（理论上不会发生）。 */
     fun select(context: Context): JsEngine {
         val abis = Build.SUPPORTED_ABIS.joinToString("/")
-        for (engine in candidates()) {
+        val mode = ScriptHealth.engineMode(context)
+        val trusted = ScriptHealth.isQuickJsTrusted(context)
+        Log.i(TAG, "脚本引擎模式: $mode（QuickJS 信任状态: $trusted，ABI: $abis）")
+        for (engine in candidates(mode, trusted)) {
             if (engine.isAvailable(context)) {
                 Log.i(TAG, "脚本引擎: ${engine.name}（ABI: $abis）")
                 return engine

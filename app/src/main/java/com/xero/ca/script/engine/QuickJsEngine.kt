@@ -37,6 +37,18 @@ class QuickJsEngine : JsEngine {
 
     override val requiresMainThread: Boolean = true
 
+    /** 慢回调计数（双引擎健康检查用：QuickJS 状态不佳时退回 Rhino）。 */
+    @Volatile
+    var slowCallbackCount: Int = 0
+        private set
+
+    /** 引擎已释放（切换到 Rhino 后，旧 QuickJS UI 的回调还可能被触发，必须挡住）。 */
+    @Volatile
+    var released: Boolean = false
+        private set
+
+    private val disposeLogged = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /** 绑定里 JsScript 的载荷：QuickJS 没有暴露 bytecode 编译接口，缓存源码。 */
     private data class ScriptData(val source: String, val sourceName: String?)
 
@@ -68,6 +80,7 @@ class QuickJsEngine : JsEngine {
     }
 
     override fun exitContext() {
+        released = true
         try {
             context?.close()
         } catch (_: Throwable) {
@@ -110,38 +123,11 @@ class QuickJsEngine : JsEngine {
         val prelude = readPrelude()
         ctx.executeVoidScript(prelude, "ca-prelude.js")
         Log.i("Script", "QuickJS: prelude 已加载（java/android/Packages + ScriptInterface）")
-        if (com.xero.ca.BuildConfig.DEBUG) {
-            try {
-                val selftest = ctx.executeStringScript(
-                    "JSON.stringify({" +
-                        "tAndroid: typeof android," +
-                        "tOs: typeof android.os," +
-                        "tBuild: typeof android.os.Build," +
-                        "buildName: android.os.Build && android.os.Build.__name," +
-                        "tVersion: typeof android.os.Build.VERSION," +
-                        "rpcClassExists: __caCall(JSON.stringify({op:'classExists', c:'android.os.Build'}))," +
-                        "rpcGetStatic: __caCall(JSON.stringify({op:'getStatic', c:'android.os.Build', n:'VERSION'}))," +
-                        "rpcGetStatic2: __caCall(JSON.stringify({op:'getStatic', c:'java.lang.Integer', n:'MAX_VALUE'}))," +
-                        "rpcClassRef: __caCall(JSON.stringify({op:'classRef', c:'android.graphics.Color'}))," +
-                        "httpGetCb: (function(){try{ScriptInterface.httpGetAsync('http://127.0.0.1:1/x', function(e,b){ java.lang.System.out.println('[CA] http callback: '+e); }); return 'called';}catch(e){return 'ERR '+e;}})()" +
-                        "})",
-                    "ca-selftest.js",
-                )
-                Log.i("Script", "QuickJS selftest: $selftest")
-            } catch (t: Throwable) {
-                Log.w("Script", "QuickJS selftest 失败: $t")
-            }
-        }
         return JsScope(ctx)
     }
 
-    /**
-     * 适配器回调：调 prelude 的 __caCallAdapter(fn, argsJson)，把 JS 返回值转回 Java。
-     *
-     * QuickJS 单线程：如果当前线程不是 JS 线程（UI 线程回调等），post 过去并等结果。
-     * 同一线程内（嵌套回调）直接执行，避免自己等自己。
-     */
     private fun callJsFunction(ctx: JSContext, fn: JSFunction, argsJson: String): Any? {
+        if (released) return null
         val target = jsThread
         val post = postToJsThread
         if (target != null && post != null && Thread.currentThread() !== target) {
@@ -162,7 +148,9 @@ class QuickJsEngine : JsEngine {
         val t0 = android.os.SystemClock.uptimeMillis()
         val result = doCallJsFunction(ctx, fn, argsJson)
         val cost = android.os.SystemClock.uptimeMillis() - t0
+        // 1.5s 以上视为"卡顿"（Rhino 时代正常回调都在几十 ms 内）
         if (cost > 1500) {
+            slowCallbackCount++
             val fnName = try { fn.get("name") as? String } catch (t: Throwable) { null }
             Log.w("Script", "JS 回调耗时 " + cost + "ms fn=" + fnName)
         }
@@ -170,12 +158,21 @@ class QuickJsEngine : JsEngine {
     }
 
     private fun doCallJsFunction(ctx: JSContext, fn: JSFunction, argsJson: String): Any? {
-        val helper = ctx.get("__caCallAdapter") as? JSFunction ?: return null
-        val arr = JSArray(ctx)
-        arr.push(fn)
-        arr.push(argsJson)
-        val result = helper.call(ctx, arr)
-        return fromJsValue(result)
+        if (released) return null
+        return try {
+            val helper = ctx.get("__caCallAdapter") as? JSFunction ?: return null
+            val arr = JSArray(ctx)
+            arr.push(fn)
+            arr.push(argsJson)
+            val result = helper.call(ctx, arr)
+            fromJsValue(result)
+        } catch (t: Throwable) {
+            // 引擎已切换到 Rhino 时，旧 UI 的回调可能还会打到已经 dispose 的 context
+            if (!released && disposeLogged.compareAndSet(false, true)) {
+                Log.w("Script", "QuickJS 回调执行失败（引擎可能已释放）", t)
+            }
+            null
+        }
     }
 
     /** JS 值 → Java 对象：原始值直接过，prelude 的 JavaObject 包装读 __handle。 */

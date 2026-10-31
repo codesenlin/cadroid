@@ -215,9 +215,7 @@ class QuickJsBridgeHost(scriptInterface: Any) {
                     return fn
                 }
                 if (type.isInterface) {
-                    val adapted = newFunctionAdapter(type, fn)
-                    android.util.Log.i("Script", "convertFn->interface " + type.name + " => " + adapted.javaClass.name)
-                    return adapted
+                    return newFunctionAdapter(type, fn)
                 } else if (type == java.lang.String::class.java || type == java.lang.CharSequence::class.java) {
                     jsToString(fn)
                 } else {
@@ -546,6 +544,45 @@ class QuickJsBridgeHost(scriptInterface: Any) {
 
     private val methodCache = java.util.concurrent.ConcurrentHashMap<String, List<Method>>()
     private val fieldCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
+
+    /**
+     * 每个类的成员表（方法按名字分组 + 字段表），只枚举一次。
+     * 之前每次 getMethods()/declaredFields 都克隆大数组，冷启动构建界面时是主要开销。
+     */
+    private class MemberTables(
+        val instanceMethods: Map<String, List<Method>>,
+        val staticMethods: Map<String, List<Method>>,
+        val instanceFields: Map<String, Field>,
+        val staticFields: Map<String, Field>,
+    )
+
+    private val memberTables = java.util.concurrent.ConcurrentHashMap<Class<*>, MemberTables>()
+
+    private fun membersOf(cls: Class<*>): MemberTables = memberTables.getOrPut(cls) {
+        val im = HashMap<String, MutableList<Method>>()
+        val sm = HashMap<String, MutableList<Method>>()
+        for (m in cls.methods) {
+            if (!isRealMethod(m)) continue
+            m.isAccessible = true
+            val table = if (Modifier.isStatic(m.modifiers)) sm else im
+            table.getOrPut(m.name) { ArrayList() }.add(m)
+        }
+        val inf = HashMap<String, Field>()
+        val stf = HashMap<String, Field>()
+        val seen = HashSet<Class<*>>()
+        fun collect(c: Class<*>) {
+            if (!seen.add(c)) return
+            for (f in c.declaredFields) {
+                f.isAccessible = true
+                val table = if (Modifier.isStatic(f.modifiers)) stf else inf
+                table.putIfAbsent(f.name, f)
+            }
+            for (i in c.interfaces) collect(i)
+            c.superclass?.let { collect(it) }
+        }
+        collect(cls)
+        MemberTables(im, sm, inf, stf)
+    }
     private val beanGetterCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
     private val beanSetterCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
     private val hasMethodCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
@@ -553,12 +590,8 @@ class QuickJsBridgeHost(scriptInterface: Any) {
     private val NONE = Any()
 
     private fun findFieldCached(cls: Class<*>, name: String, static: Boolean): Field? {
-        val key = cls.name + "#" + name + "#" + static
-        val hit = fieldCache[key]
-        if (hit != null) return if (hit === NONE) null else hit as Field
-        val f = findField(cls, name, static)
-        fieldCache[key] = f ?: NONE
-        return f
+        val tables = membersOf(cls)
+        return if (static) tables.staticFields[name] else tables.instanceFields[name]
     }
 
     private fun beanGetterCached(cls: Class<*>, name: String): Method? {
@@ -580,19 +613,17 @@ class QuickJsBridgeHost(scriptInterface: Any) {
     }
 
     private fun hasMethodCached(cls: Class<*>, name: String, static: Boolean): Boolean {
-        val key = cls.name + "#" + name + "#" + static
-        hasMethodCache[key]?.let { return it }
-        val r = hasMethod(cls, name, static)
-        hasMethodCache[key] = r
-        return r
+        val tables = membersOf(cls)
+        return (if (static) tables.staticMethods else tables.instanceMethods).containsKey(name)
     }
 
     private fun methodsNamed(cls: Class<*>, name: String, static: Boolean, n: Int): List<Method> {
         val key = cls.name + "#" + name + "#" + static + "#" + n
         methodCache[key]?.let { return it }
-        val list = cls.methods.filter {
-            it.name == name && Modifier.isStatic(it.modifiers) == static && isRealMethod(it) &&
-                (it.parameterCount == n || (it.isVarArgs && n >= it.parameterCount - 1))
+        val members = membersOf(cls)
+        val all = (if (static) members.staticMethods[name] else members.instanceMethods[name]) ?: emptyList()
+        val list = all.filter {
+            it.parameterCount == n || (it.isVarArgs && n >= it.parameterCount - 1)
         }
         methodCache[key] = list
         return list

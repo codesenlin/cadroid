@@ -150,7 +150,53 @@ class ScriptInterface(manager: ScriptManager) {
     /** 当前脚本引擎名（"Rhino" / "QuickJS"），排查回退问题时用。 */
     fun getScriptEngine(): String = mManager.getEngine().name
 
+    /** 双引擎模式：auto / rhino / quickjs（脚本里可读写，重启生效）。 */
+    fun getScriptEngineMode(): String = com.xero.ca.script.engine.ScriptHealth.engineMode(mContext)
+
+    // ---------- QuickJS 侧载加速 worker（Rhino 主引擎调用，纯 JS 计算） ----------
+
+    /** worker 是否可用。 */
+    fun quickWorkerAvailable(): Boolean = com.xero.ca.script.engine.QuickJsWorker.isAvailable()
+
+    /** 在 QuickJS worker 注册一个纯 JS 函数（source: "function name(args){...}"）。 */
+    fun quickWorkerRegister(source: String): Boolean {
+        // 从 "function name(" 里提取函数名
+        val name = Regex("function\\s+([A-Za-z0-9_$]+)\\s*\\(").find(source)?.groupValues?.get(1) ?: return false
+        val escaped = source.replace("\\", "\\\\").replace("\"", "\\\"")
+        com.xero.ca.script.engine.QuickJsWorker.eval("eval(\"$escaped\"); true") ?: return false
+        return com.xero.ca.script.engine.QuickJsWorker.eval("typeof $name === 'function'") == "true"
+    }
+
+    /** 调用 worker 里的函数，argsJson 是 JSON 数组，返回 JSON 字符串。 */
+    fun quickWorkerCall(name: String, argsJson: String): String? =
+        com.xero.ca.script.engine.QuickJsWorker.call(name, argsJson)
+
+    /** 直接执行 JS（调试/基准用），返回结果字符串。 */
+    fun quickWorkerEval(code: String): String? = com.xero.ca.script.engine.QuickJsWorker.eval(code)
+
+    /**
+     * 把一个 JSON 值缓存到 worker 的全局变量里（只传一次，后续调用复用）。
+     * 用于大块数据（命令库等）避免每次调用都序列化。
+     */
+    fun quickWorkerSetVar(name: String, json: String): Boolean {
+        val safe = name.filter { it.isLetterOrDigit() || it == '_' }
+        if (safe.isEmpty()) return false
+        val escaped = json.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "")
+        return com.xero.ca.script.engine.QuickJsWorker.eval(
+            "globalThis.$safe = JSON.parse(\"$escaped\"); true"
+        ) == "true"
+    }
+
+    fun setScriptEngineMode(mode: String) {
+        com.xero.ca.script.engine.ScriptHealth.setEngineMode(mContext, mode)
+    }
+
+    /** 给脚本/排查用：当前引擎健康状态描述。 */
+    fun getScriptEngineHealth(): String =
+        com.xero.ca.script.engine.ScriptHealth.describe(mContext) + " current=" + mManager.getEngine().name
+
     /** HTTP 回调（脚本侧用 JS 对象实现）。 */
+    @androidx.annotation.Keep
     interface HttpCallback {
         fun onDone(error: String?, body: String?)
     }
@@ -159,29 +205,35 @@ class ScriptInterface(manager: ScriptManager) {
      * 异步 GET：脚本在 QuickJS 下跑在主线程，同步网络会卡主线程（ANR）。
      * 这个接口在后台线程请求，完成后回调脚本（回调会 marshal 回 JS 线程）。
      */
+    @androidx.annotation.Keep
     fun httpGetAsync(url: String, callback: HttpCallback?) {
         val cb: HttpCallback = callback ?: return
-        val reqUrl = url
-        Thread(object : Runnable {
-            override fun run() {
-                var error: String? = null
-                var body: String? = null
-                try {
-                    val conn = java.net.URL(reqUrl).openConnection()
-                    conn.connectTimeout = 5000
-                    conn.readTimeout = 5000
-                    (conn as? java.net.HttpURLConnection)?.requestMethod = "GET"
-                    body = conn.getInputStream().bufferedReader().use { it.readText() }
-                } catch (t: Throwable) {
-                    error = t.toString()
-                }
-                try {
-                    cb.onDone(error, body)
-                } catch (t: Throwable) {
-                    android.util.Log.w("Script", "httpGetAsync 回调失败", t)
-                }
+        Thread(HttpGetTask(url, cb), "CA-http").start()
+    }
+
+    /** HTTP GET 任务（独立类：R8 对匿名内部类的捕获字段处理有问题，实测回调字段会丢成 null）。 */
+    private class HttpGetTask(
+        private val url: String,
+        private val callback: HttpCallback,
+    ) : Runnable {
+        override fun run() {
+            var error: String? = null
+            var body: String? = null
+            try {
+                val conn = java.net.URL(url).openConnection()
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                (conn as? java.net.HttpURLConnection)?.requestMethod = "GET"
+                body = conn.getInputStream().bufferedReader().use { it.readText() }
+            } catch (t: Throwable) {
+                error = t.toString()
             }
-        }, "CA-http").start()
+            try {
+                callback.onDone(error, body)
+            } catch (t: Throwable) {
+                android.util.Log.w("Script", "httpGetAsync 回调失败", t)
+            }
+        }
     }
 
     fun getShellVersion(): Int = BuildConfig.SHELL_VERSION

@@ -224,6 +224,102 @@ Java 异常消息、Java 侧调 JS 全局函数（`callFunction`）。
 候选：`io.github.taoweiji.quickjs:quickjs-android:1.4.6`（Maven Central，Apache-2.0，
 四种 ABI，提供 `JSFunction.call` / `registerJavaMethod` / `addJavascriptInterface`）。
 
+### E2.14：QuickJS 线收尾（2026-10-31 下午）
+
+真机日志显示 Rhino 下已无明显主线程卡点（卡顿探针只采到 1 条系统噪音），
+QuickJS 纯计算侧载收益明确（命令匹配 8x）；据此收尾：
+
+- **httpGetAsync 回调 NPE 修复**：此前 Kotlin 捕获的接口回调在 QuickJS 下
+  运行时变成 null（疑似 R8 对捕获字段处理），加 `@Keep` + 独立
+  `HttpGetTask` 类后，QuickJS 下实测回调正常（selftest 收到
+  ConnectException 回调）→ 推送设置页异步加载可用
+- **默认引擎回归 Rhino**：稳定优先；QuickJS 主引擎保留实验开关
+  `-Pca.jsEngine=quickjs`（强制）/ `auto`（健康检查 + 自动回退）
+- **保留 QuickJS 侧载 worker**：Rhino 主引擎下加速纯 JS 计算
+  （命令联想匹配已接入，8x，不可用自动回退）
+- 清理开发期临时件：QuickJS selftest、主线程卡顿监控、脚本 PROF 探针
+
+结论：日常 = Rhino（稳定快）+ QuickJS worker（纯计算加速）；
+QuickJS 主引擎作为实验能力保留。
+
+### E2.13：首个真实热点迁移 —— 命令联想匹配（2026-10-31 下午）
+
+侧载 worker 跑通后，挑真实热点做迁移。选中 **IntelliSense 命令名匹配**：
+每次输入都会对整个命令库做 `filter + sort`，纯 JS、数据可 JSON 化。
+
+- 新增 worker 侧 `matchCommands(prefix)`：命令库用 `quickWorkerSetVar`
+  一次性同步（缓存到 worker 全局），之后每次只传前缀
+- `CA.IntelliSense.procCmd`：优先 worker 匹配，不可用/失败回退原 JS 实现
+- 基准（n=3000 命令）：**Rhino 200ms/次 → QuickJS ≈25ms/次（8x）**；
+  首次库同步 432ms，发生在 IntelliSense 的后台线程池里，不卡 UI
+- 匹配结果一致（same=true）
+
+后续候选：FCString 解析/格式化、JSON 补全（JSONLanguageService）、
+sense 引擎 tokenizer。
+
+### E2.12：架构转向「Rhino 主引擎 + QuickJS 侧载加速」（2026-10-31 下午）
+
+实测证实 QuickJS 的桥通信成本（每次 Java 调用 0.7~2ms，是 Rhino 的几十倍），
+界面构建这种"上千次反射调用"的活儿交给 QuickJS 只会更慢。所以方向调整为：
+
+**Rhino 继续做全量脚本 + UI/反射；QuickJS 只当"纯 JS 计算加速器"侧载使用。**
+
+- 新增 `script/engine/QuickJsWorker.kt`：
+  - 独立线程持有一个 QuickJS context（单线程是 QuickJS 硬约束，用任务队列变服务）
+  - **不接 Java 反射桥**，只做 JSON 进 / JSON 出
+  - `register(name, source)` / `call(name, argsJson)` / `eval(code)`
+  - Rhino 脚本线程同步等结果（脚本线程本来就在后台，不会 ANR）
+- `ScriptInterface` 暴露 `quickWorkerRegister/quickWorkerCall/quickWorkerEval`
+- 适用场景：纯算法/纯 JS 数据处理（命令解析、格式化、大型数组运算…）；
+  界面构建、IO、反射型逻辑永远留在 Rhino
+- 顺带把"卡顿判定"阈值收紧：回调 >1.5s 计一次，稳定期累计 2 次即回退 Rhino
+
+下一步：选 1 个纯 JS 热点模块做基准（Rhino 直接跑 vs QuickJS worker），
+确认收益倍数后再迁移更多。
+
+### E2.11：QuickJS 冷启动优化 + 启动阶段豁免（2026-10-31 中午）
+
+E2.10 实测发现：QuickJS 冷启动会被看门狗判死（主线程阻塞 4.4~5s）→ 每次都
+回 Rhino，QuickJS 实际没机会用。两项优化：
+
+1. **类成员表缓存**（桥性能）
+   - 每个类只枚举一次 `getMethods()`/`declaredFields`，按名字分组缓存；
+     之前每个 (类,方法名) 都要克隆一次大数组，冷启动构建界面时是主要开销
+   - `findFieldCached`/`hasMethodCached` 也走成员表
+
+2. **启动阶段豁免**
+   - 看门狗前 20s 只记录"主线程响应慢"，不判定回退：
+     冷启动时脚本初始化本来就长时间占主线程，但此时没有用户输入，
+     不会触发输入 ANR（输入 ANR 需要 5s 内无响应事件）
+   - 20s 后进入稳定期，再按 4s / 慢回调 3 次判定
+   - 启动 120s 无回退 → 标记 QuickJS 可靠
+
+实测：QuickJS 冷启动 645ms 编译 + 4.6s 初始化（豁免期内），**保持 QuickJS
+不再回退**；无崩溃无 ANR。
+
+### E2.10：双引擎自适应（QuickJS 加速 / Rhino 兜底）（2026-10-31 中午）
+
+真机验证结论：QuickJS 桥的速度已经够用，但**冷启动时主界面构建会阻塞主线程
+5s+**（单线程 + 主线程模型绕不开），会触发 ANR。按"状态支持就加速、不行就
+Rhino 兜底"的思路做成自适应：
+
+- `BuildConfig.JS_ENGINE` 新增 `auto`（默认）：优先 QuickJS，状态不好自动退回 Rhino
+- `ScriptHealth`（SharedPreferences）记录 QuickJS 是否可靠：
+  - 初始化失败 / 主线程阻塞 > 4s / 慢回调（>2.5s）累计 3 次 → 标记不可靠
+  - 不可靠后 24h 内 auto 模式直接用 Rhino，避免每次启动都白试 QuickJS
+  - 启动 90s 内没触发回退 → 标记可靠（继续用 QuickJS）
+- `ScriptManager` 增加：
+  - 主线程看门狗（每 500ms ping 一次主线程，>4s 判定卡死）
+  - `fallbackToRhino()`：当场 unload 旧脚本、释放 QuickJS、用 Rhino 重新
+    准备并运行（同进程，不重启 App）
+  - `QuickJsEngine.released` 保护：切换后旧 UI 的回调打到已 dispose 的
+    context 时静默丢弃（原来会抛 `Context disposed error` 崩溃）
+- 脚本 API：`ScriptInterface.getScriptEngineMode()/setScriptEngineMode(mode)`
+  （auto/rhino/quickjs，重启生效）、`getScriptEngineHealth()`
+
+实测（OPPO API 34）：冷启动 QuickJS 主线程阻塞 5s → 自动切 Rhino 重新准备，
+无崩溃、无 ANR，用户反馈"没有卡顿了"。
+
 ### E2.9：修正 G.ui 语义 + 脚本侧反射缓存（2026-10-31 上午）
 
 E2.8 里把 `runOnUiThread` 改成 post 解决了 ANR，但引入新问题：

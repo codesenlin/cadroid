@@ -37,6 +37,8 @@ def rhinoCompat = (findProperty('ca.rhinoCompat') ?: 'true') != 'false'
 //   rhino   = 默认，当前生产引擎
 //   quickjs = 尝试 QuickJS（E1 阶段只有 compile/execute，Java 桥在 E2，
 //             真实脚本跑不了，仅用于验证引擎本身）
+// 默认 rhino（稳定快）；QuickJS 侧载 worker 在 Rhino 下提供纯 JS 加速。
+// 实验主引擎：-Pca.jsEngine=quickjs（强制）或 auto（状态好时用 QuickJS，不好自动回 Rhino）
 def jsEngine = (findProperty('ca.jsEngine') ?: 'rhino').toString().toLowerCase()
 
 android {
