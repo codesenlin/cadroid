@@ -2,6 +2,16 @@
 
 > 这份文档记录两件并行的事：把 cadroid 壳子从 Java 迁到 Kotlin，以及评估把核心脚本
 > 的 JS 引擎从 Rhino 换成 QuickJS。目的是让后来的人（或压缩后的上下文）能接上进度。
+>
+> **最终结论（E2.17 之后）**：**不换主引擎**。脚本继续跑 Rhino（反射/UI 密集逻辑最快），
+> QuickJS 只保留为**纯计算侧载 worker**（`QuickJsWorker` + 脚本侧 `QuickAccel`：
+> JSON 进/JSON 出、命令库只同步一次；命令联想匹配实测 162ms → ~16ms）。
+> 引擎依赖最终改用 `io.github.dokar3:quickjs-kt-android:1.0.15`（16KB page 对齐）。
+>
+> **阅读提示**：下面的 E0-E2.14 章节是探索过程的历史记录，其中出现的
+> `BuildConfig.JS_ENGINE` / `-Pca.jsEngine` / `QuickJsEngine` / `QuickJsBridgeHost` /
+> `quickjs-prelude.js` / `JsEngines` 选择器 / `ScriptHealth` / taoweiji 绑定等，
+> **均已在本轮收尾中删除**，以 E2.15-E2.17 的描述和当前代码为准。
 
 ## 一、Kotlin 化
 
@@ -261,7 +271,7 @@ latestVersion 是过期的）。最终改用社区维护库：
   `tools:overrideLibrary="com.dokar.quickjs"`，API<23 的设备不启用 worker
   （纯计算加速是可选项，不影响脚本）
 - 实测（真机）：纯 JS 基准 n=50000 Rhino 2471ms vs QuickJS 52ms（~47x）；
-  命令匹配 3000 条 Rhino 162ms vs QuickJS 稳态 ~16ms（首次同步 415ms）；
+  命令匹配 3000 条 Rhino 162ms vs QuickJS 稳态 ~25ms（≈6-8x，首次同步几十 ms）；
   `regOk=true`、结果一致
 - APK 体积 8.4MB，所有 native 库（libquickjs.so / libturingad.so）均
   16KB 对齐
@@ -620,6 +630,7 @@ QuickJS 是 native 库（`.so`），不管用哪个绑定，预编译产物都�
 
 E1 接 QuickJS 时只要把 `QuickJsEngine()` 加到 `JsEngines.candidates()` 最前面，
 回退逻辑不用改；32 位 ARM / 小众架构会自然走 Rhino，脚本行为一致（只是慢一些）。
+（历史记录：`JsEngines` 选择器和 `QuickJsEngine` 已在 E2.17 删除，现在主引擎固定 Rhino。）
 
 排查用：`ScriptInterface.getScriptEngine()` 返回当前引擎名。
 
@@ -645,11 +656,11 @@ E1 接 QuickJS 时只要把 `QuickJsEngine()` 加到 `JsEngines.candidates()` �
   这部分开销未知，可能吃掉上面的收益；
 - 所以 E4 在设备上用**真实脚本**测冷启动 / 补全延迟 / 内存，再决定默认引擎。
 
-### 换引擎之后才能收掉的口子
+### 换引擎之后才能收掉的口子（已不适用）
 
-- `gradle.properties` 的 `ca.rhinoCompat=true` → 可改 `false`
-  （调试包不再需要 R8 dex，见 `docs/apk-build.md` 的「Rhino 兼容编译模式」）
-- 随之可以删掉 `android.sync.suppressAgpWarnings=DEBUGGABLE_AND_MINIFIED_ENABLED`
+> 最终结论是不换主引擎（Rhino 保留、QuickJS 只做侧载 worker），所以
+> `ca.rhinoCompat=true` 和 `android.sync.suppressAgpWarnings` 都继续保留。
+> 这一节仅作为当初"如果真换了引擎"的清单留档。
 
 ### 还留在 Rhino 上的部分（E2 范围）
 

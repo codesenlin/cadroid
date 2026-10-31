@@ -10,7 +10,15 @@
 
 正式包仍由 CA 的 `cabuildtools shellBuildRelease` 产出（对 APK 签名 + 放进 `build/dist`）。
 
-## 分体包（.apks）实测收益
+## 分体包（.apks）实测收益（旧测量，未含 quickjs-kt）
+
+> 下面这组数据是引入 QuickJS 侧载 worker **之前**测的（当时全项目只有一个原生库
+> `libturingad.so`，约 750 KB）。现在多了一个 `libquickjs.so`（quickjs-kt，四个 ABI
+> 合计约 3.6 MB），分体包相对通用 APK 的收益会明显变大；需要时用 bundletool 重测。
+> 当前通用 release APK 实测 **6.10 MB**（未签名，含 GDT）。
+>
+> 另：`libquickjs.so` / `libturingad.so` 均为 **16KB page 对齐**（Android 15+ 16KB
+> 设备的要求），来源分别是 quickjs-kt 1.0.15 与优量汇 AAR。
 
 `bundletool get-size total --dimensions=ABI`：
 
@@ -22,9 +30,9 @@
 
 对照通用 APK：**4.13 MB**。
 
-**只省约 90 KB（2%）。** 原因：
+**（旧测量）只省约 90 KB（2%）。** 原因：
 
-- 全项目只有一个原生库 `libturingad.so`（来自优量汇 AAR），三种 ABI 合计约 750 KB
+- 当时全项目只有一个原生库 `libturingad.so`（来自优量汇 AAR），三种 ABI 合计约 750 KB
 - 没有按密度/语言拆分的资源（图片只有 8 张）
 - AAB 的 `base-master.apk` 本身仍是 3.75 MB
 
@@ -101,8 +109,9 @@ ca.rhinoCompat=true     # 默认：调试包也走 R8
 1. AGP 9.5 会对 `debuggable + minifyEnabled` 发警告（提示优化/混淆会被关闭）。
    我们本来就不需要优化/混淆、只需要 R8 dexing，所以在
    `gradle.properties` 里用 `android.sync.suppressAgpWarnings=DEBUGGABLE_AND_MINIFIED_ENABLED` 关掉。
-2. **换掉 Rhino（迁到 QuickJS）之后**：把 `ca.rhinoCompat` 设为 `false`，
-   调试包就恢复成普通的 debuggable 构建，同时可以删掉上面那条 suppress。
+2. 目前 **Rhino 仍是脚本主引擎**（`QuickJsEngine` 那套实验实现已在 E2.15 移除），
+   所以 `ca.rhinoCompat` 要保持 `true`；只有真正彻底去掉 Rhino 之后才能关掉，
+   调试包才会恢复成普通的 debuggable 构建。
 
 ## 可选组件：优量汇（广告）
 
@@ -113,8 +122,10 @@ arm64-v8a），没有 x86 / x86_64。所以它天然是"小众架构跑不了"�
 
 | 命令                                                | APK         | 原生库                                                                | 架构覆盖                   |
 |-----------------------------------------------------|-------------|-----------------------------------------------------------------------|----------------------------|
-| `./gradlew :app:assembleRelease`                    | **4.13 MB** | `libturingad.so`（arm ×3）+ `libandroidx.graphics.path.so`（全 4 种） | arm 完整；x86 靠运行期降级 |
-| `./gradlew :app:assembleRelease -Pca.withGdt=false` | **1.42 MB** | 只有 `libandroidx.graphics.path.so`（全 4 种）                        | **全架构**                 |
+| `./gradlew :app:assembleRelease`                    | **6.10 MB** | `libquickjs.so`（全 4 种）+ `libturingad.so`（arm ×3） | arm 完整；x86 靠运行期降级 |
+| `./gradlew :app:assembleRelease -Pca.withGdt=false` | **3.39 MB** | 只有 `libquickjs.so`（全 4 种）                        | **全架构**                 |
+
+（以上为未签名 release APK 实测体积，2026-10-31；含 quickjs-kt 侧载 worker 的 .so。）
 
 `-Pca.withGdt=false` 时走 `src/stub/gdt` 的空实现，广告相关代码编译进空壳，
 `BuildConfig.GDT_ENABLED = false`，运行期不会尝试加载原生库。
@@ -139,8 +150,9 @@ arm64-v8a），没有 x86 / x86_64。所以它天然是"小众架构跑不了"�
    （GDT 只覆盖 ARM）就跳过初始化，连加载都不尝试
 3. **运行期加载兜底**：`catch (Throwable)` + `GdtState.ready` —— 库在但加载失败时降级
 
-同样的思路也用在脚本引擎上（见 `docs/migration-kotlin-quickjs.md` 的 E1）：
-QuickJS 的 so 只覆盖部分 ABI，不可用时自动回退 Rhino。
+脚本引擎也是同样的思路：主引擎固定 Rhino（纯 Java，任何架构可用）；QuickJS
+只作为纯计算侧载 worker（`quickjs-kt`，四 ABI），库缺失/API 过低时 worker
+静默不可用，脚本功能不受影响（见 `docs/migration-kotlin-quickjs.md`）。
 
 实测（把 release APK 的 `lib/**` 全删掉再装到 Android 14）：应用正常启动，
 只是广告关闭。x86 设备就属于这种情况。

@@ -21,9 +21,9 @@ import java.lang.ref.WeakReference
 /**
  * 脚本引擎的管理者：负责加载/编译脚本、在独立线程里跑事件循环。
  *
- * E0（见 docs/migration-kotlin-quickjs.md）：这里已经不再直接引用 Rhino，
- * 引擎相关的东西都收在 [JsEngine] / [RhinoEngine] 里；换 QuickJS 时只要换
- * [engine] 的实现。
+ * 主引擎固定 Rhino（反射/UI 密集逻辑最快）；引擎细节收在 [JsEngine] /
+ * [RhinoEngine] 里。QuickJS 不再是主引擎，只由 [QuickJsWorker] 承担纯计算
+ * 侧载加速（JSON 进出）。迁移经过见 docs/migration-kotlin-quickjs.md。
  */
 class ScriptManager private constructor() {
 

@@ -25,7 +25,7 @@ def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar').exists()
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
 def caaccelAvailable = file('libs/caaccel.jar').exists()
 
-// Rhino 兼容编译模式（为以后换 JS 引擎铺路，见 docs/migration-kotlin-quickjs.md）：
+// Rhino 兼容编译模式（Rhino 1.9 在 minSdk 21 下的 dex 兼容，见 docs/migration-kotlin-quickjs.md）：
 //   true  = 调试包也走 R8 的 dex 流程。Rhino 1.9 的 SlotMapOwner$ThreadedAccess
 //           用了 MethodHandle.invoke，minSdk 21 下 D8 不做兼容转换，不开 R8 会
 //           直接 "Error while dexing"
