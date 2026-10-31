@@ -7,6 +7,7 @@ import android.util.Log
 import com.xero.ca.script.engine.JsContext
 import com.xero.ca.script.engine.JsEngine
 import com.xero.ca.script.engine.JsScope
+import com.xero.ca.script.engine.JsEngines
 import com.xero.ca.script.engine.JsScript
 import com.xero.ca.script.engine.RhinoEngine
 import java.io.File
@@ -48,6 +49,8 @@ class ScriptManager private constructor() {
         running = true
         bindContext = ctx
         sourceName = srcName
+        // 按 ABI/可用性选引擎：QuickJS 不可用（如 32 位 ARM、小众架构）时自动回退 Rhino
+        engine = JsEngines.select(ctx)
         val th = Thread(
             Thread.currentThread().threadGroup,
             PrepareCommand(runAfterPrepared),
@@ -175,6 +178,28 @@ class ScriptManager private constructor() {
     /** 把 Java 对象包装成脚本可直接调用的值（引擎相关，交给 [engine]）。 */
     fun wrapAsScriptable(obj: Any?, scope: Any?): Any? = engine.wrapAsScriptable(obj, scope)
 
+    private var lastInitError: Throwable? = null
+
+    /** 初始化引擎运行时；失败把异常记到 [lastInitError]，由调用方决定是否回退。 */
+    private fun initScriptRuntime(): Boolean = try {
+        cx = engine.enterContext()
+        scope = engine.initScope(cx!!, scriptInterface!!)
+        handler = Handler()
+        true
+    } catch (t: Throwable) {
+        lastInitError = t
+        Log.e("Script", "脚本引擎 ${engine.name} 初始化失败", t)
+        false
+    }
+
+    private fun reportEngineError(t: Throwable?) {
+        val ctx = bindContext ?: return
+        XApplication.reportError(
+            ctx.applicationContext, Thread.currentThread(),
+            IllegalStateException("脚本引擎初始化失败（${engine.name} 运行时不可用）", t)
+        )
+    }
+
     inner class PrepareCommand(private val runAfterPrepared: Boolean) : Runnable {
         override fun run() {
             Looper.prepare()
@@ -182,21 +207,24 @@ class ScriptManager private constructor() {
             // Android 上不存在，正常情况下（-1 纯解释）不会加载到它们，但万一触发，
             // 抛的是 ExceptionInInitializerError（Error 不是 Exception），这里必须接住，
             // 否则直接崩在启动阶段。
-            try {
-                scriptInterface = initScriptInterface()
-                cx = engine.enterContext()
-                scope = engine.initScope(cx!!, scriptInterface!!)
-                handler = Handler()
-            } catch (t: Throwable) {
-                Log.e("Script", "脚本引擎初始化失败", t)
-                val ctx = bindContext
-                if (ctx != null) {
-                    XApplication.reportError(
-                        ctx.applicationContext, Thread.currentThread(),
-                        IllegalStateException("脚本引擎初始化失败（${engine.name} 运行时不可用）", t)
-                    )
+            scriptInterface = initScriptInterface()
+            if (!initScriptRuntime()) {
+                // 运行时才发现不可用（例如 .so 存在但加载失败）：回退 Rhino 再试一次
+                if (engine.name != "Rhino") {
+                    Log.w("Script", "脚本引擎 ${engine.name} 初始化失败，回退 Rhino", lastInitError)
+                    try {
+                        engine.exitContext()
+                    } catch (_: Throwable) {
+                    }
+                    engine = RhinoEngine()
+                    if (!initScriptRuntime()) {
+                        reportEngineError(lastInitError)
+                        return
+                    }
+                } else {
+                    reportEngineError(lastInitError)
+                    return
                 }
-                return
             }
             try {
                 val time = SystemClock.uptimeMillis()

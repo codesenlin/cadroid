@@ -16,4 +16,9 @@ object GdtState {
     @Volatile
     var ready: Boolean = false
         internal set
+
+    /** 广告不可用的原因（ABI 不支持 / so 加载失败 / 未配置 AppID 等），排查用。 */
+    @Volatile
+    var reason: String? = null
+        internal set
 }

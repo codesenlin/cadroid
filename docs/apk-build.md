@@ -76,6 +76,34 @@ java -jar tools/bundletool.jar install-apks --apks=build/dist/命令助手.apks
 
 结果：**没有原生库时，应用照常运行，只是广告关掉。**
 
+## Rhino 兼容编译模式（debug 也走 R8）
+
+调试包是 `debuggable + minifyEnabled` 的组合，这是故意的：
+
+- Rhino 1.9 的 `SlotMapOwner$ThreadedAccess` 用了 `MethodHandle.invoke`
+- minSdk 21 下 D8 不做兼容转换，R8 会
+- 所以调试包也必须走 R8 的 dex 流程，否则 `assembleDebug` 直接
+  `Error while dexing`
+
+这个模式用开关控制（`app/build.gradle` 的 `rhinoCompat`）：
+
+```properties
+# gradle.properties
+ca.rhinoCompat=true     # 默认：调试包也走 R8
+```
+
+```bash
+./gradlew :app:assembleDebug -Pca.rhinoCompat=false   # 关掉（当前会 dex 失败）
+```
+
+两个相关改动：
+
+1. AGP 9.5 会对 `debuggable + minifyEnabled` 发警告（提示优化/混淆会被关闭）。
+   我们本来就不需要优化/混淆、只需要 R8 dexing，所以在
+   `gradle.properties` 里用 `android.sync.suppressAgpWarnings=DEBUGGABLE_AND_MINIFIED_ENABLED` 关掉。
+2. **换掉 Rhino（迁到 QuickJS）之后**：把 `ca.rhinoCompat` 设为 `false`，
+   调试包就恢复成普通的 debuggable 构建，同时可以删掉上面那条 suppress。
+
 ## 可选组件：优量汇（广告）
 
 优量汇依赖原生库 `libturingad.so`，而它**只有 arm 版本**（armeabi / armeabi-v7a /
@@ -91,15 +119,28 @@ arm64-v8a），没有 x86 / x86_64。所以它天然是"小众架构跑不了"�
 `-Pca.withGdt=false` 时走 `src/stub/gdt` 的空实现，广告相关代码编译进空壳，
 `BuildConfig.GDT_ENABLED = false`，运行期不会尝试加载原生库。
 
+装了 GDT 的包在非 ARM 设备上也不会崩：
+
+- 启动时 `GdtSupport.isAbiSupported()` 先查 `Build.SUPPORTED_ABIS`，不含 ARM 就
+  直接跳过初始化（`GdtState.reason` 记原因）
+- 即使是 ARM，`.so` 加载失败（例如 AAB 只装了 base 包）也有
+  `catch (Throwable)` 兜底（`UnsatisfiedLinkError` 是 Error 不是 Exception）
+- `AdProvider.isAdEnabled()` 同时要求 `GDT_ENABLED && GdtState.ready`，没就绪就不请求广告
+
 ## 原则：原生库必须可选，小众架构才可用
 
 厂商的原生库永远只覆盖主流 ARM。所以能不能在 x86 / riscv64 / 未来新架构上运行，
 取决于**缺了那个库时应用会不会崩**，而不是取决于库本身。
 
-两层保障：
+三层保障（以优量汇为例）：
 
 1. **构建期**：`GDT_ENABLED`（或 `-Pca.withGdt=false`）决定要不要装这个 SDK
-2. **运行期**：`GdtState.ready` + `try/catch (Throwable)` —— 库在但加载失败时降级
+2. **运行期 ABI 预检**：`GdtSupport.isAbiSupported()` —— 设备架构不在 so 覆盖范围
+   （GDT 只覆盖 ARM）就跳过初始化，连加载都不尝试
+3. **运行期加载兜底**：`catch (Throwable)` + `GdtState.ready` —— 库在但加载失败时降级
+
+同样的思路也用在脚本引擎上（见 `docs/migration-kotlin-quickjs.md` 的 E1）：
+QuickJS 的 so 只覆盖部分 ABI，不可用时自动回退 Rhino。
 
 实测（把 release APK 的 `lib/**` 全删掉再装到 Android 14）：应用正常启动，
 只是广告关闭。x86 设备就属于这种情况。

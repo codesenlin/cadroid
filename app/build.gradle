@@ -25,6 +25,14 @@ def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar').exists()
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
 def caaccelAvailable = file('libs/caaccel.jar').exists()
 
+// Rhino 兼容编译模式（为以后换 JS 引擎铺路，见 docs/migration-kotlin-quickjs.md）：
+//   true  = 调试包也走 R8 的 dex 流程。Rhino 1.9 的 SlotMapOwner$ThreadedAccess
+//           用了 MethodHandle.invoke，minSdk 21 下 D8 不做兼容转换，不开 R8 会
+//           直接 "Error while dexing"
+//   false = 调试包退回普通的 debuggable 构建（只有把 Rhino 换掉之后才能关）
+// 切换方式：gradle.properties 里改 ca.rhinoCompat，或命令行 -Pca.rhinoCompat=false
+def rhinoCompat = (findProperty('ca.rhinoCompat') ?: 'true') != 'false'
+
 android {
     namespace = 'com.xero.ca'
     compileSdk = 37
@@ -66,10 +74,9 @@ android {
     buildTypes {
         debug {
             debuggable true
-            // Rhino 1.9 的 SlotMapOwner$ThreadedAccess 用了 MethodHandle.invoke，
-            // D8 在 minSdk 21 下不会做兼容转换（R8 会），所以调试包也要走 R8。
+            // Rhino 兼容编译模式（见文件开头的 rhinoCompat）：调试包也走 R8。
             // 不开启的话 assembleDebug 会直接报 "Error while dexing"。
-            minifyEnabled true
+            minifyEnabled rhinoCompat
             shrinkResources = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             multiDexEnabled = true
@@ -135,7 +142,7 @@ dependencies {
 
     implementation 'androidx.annotation:annotation:1.11.0'
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
-    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
     implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
     implementation 'net.lingala.zip4j:zip4j:2.11.6'
@@ -143,9 +150,9 @@ dependencies {
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
-    implementation 'org.mozilla:rhino:1.9.1'
+    implementation 'org.mozilla:rhino:1.9.2'
     // E4X（XML 字面量）支持：1.8 起从核心拆成独立模块，老脚本可能用到
-    implementation 'org.mozilla:rhino-xml:1.9.1'
+    implementation 'org.mozilla:rhino-xml:1.9.2'
 }
 
 // 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle

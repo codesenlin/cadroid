@@ -150,6 +150,35 @@ git subtree pull --prefix=cadroid https://github.com/codesenlin/cadroid.git main
 3. 跑同一份脚本，验证 `ScriptInterface` 的 `@ScriptObject` 方法能被 JS 调到
 4. 这一步不用碰 `java` / `android` 命名空间（那是 E2 的桥）
 
+### QuickJS 的 ABI 限制与自动回退（E1 实现要点）
+
+QuickJS 是 native 库（`.so`），不管用哪个绑定，预编译产物都只覆盖部分 ABI：
+
+| ABI | QuickJS | 说明 |
+|-----|---------|------|
+| arm64-v8a | ✅ | 主流 64 位 ARM |
+| x86_64 | ✅ | 模拟器 / Chromebook |
+| armeabi-v7a | ⚠️ | 32 位 ARM，部分绑定没有产物 |
+| x86 / riscv64 / 其他 | ❌ | 小众架构，基本没有 |
+
+所以引擎层要**有回退链**，已经铺好：
+
+- `JsEngine.isAvailable(context)`：各引擎自己判断当前设备能不能用
+- `JsEngines.select(context)`：按优先级挑第一个可用的（QuickJS 不可用就落到 Rhino）
+- `ScriptManager`：选中引擎后初始化失败（例如 so 存在但加载失败）会再回退一次 Rhino
+- Rhino 是纯 Java，**永远可用，是最终回退**
+
+E1 接 QuickJS 时只要把 `QuickJsEngine()` 加到 `JsEngines.candidates()` 最前面，
+回退逻辑不用改；32 位 ARM / 小众架构会自然走 Rhino，脚本行为一致（只是慢一些）。
+
+排查用：`ScriptInterface.getScriptEngine()` 返回当前引擎名。
+
+### 换引擎之后才能收掉的口子
+
+- `gradle.properties` 的 `ca.rhinoCompat=true` → 可改 `false`
+  （调试包不再需要 R8 dex，见 `docs/apk-build.md` 的「Rhino 兼容编译模式」）
+- 随之可以删掉 `android.sync.suppressAgpWarnings=DEBUGGABLE_AND_MINIFIED_ENABLED`
+
 ### 还留在 Rhino 上的部分（E2 范围）
 
 - `script/RhinoFrameLayout.kt`、`RhinoWebView.kt`、`RhinoWebSocketClientHelper.kt`、

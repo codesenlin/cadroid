@@ -36,6 +36,15 @@ interface JsEngine {
     /** 引擎名，日志/排错用。 */
     val name: String
 
+    /**
+     * 当前设备上引擎是否可用。
+     *
+     * Rhino 是纯 Java，永远可用；QuickJS 依赖 native `.so`，预编译产物往往只覆盖
+     * arm64-v8a / x86_64 这类主流 ABI，**32 位 ARM 和小众架构上会返回 false**，
+     * 由 [JsEngines] 自动回退到 Rhino（脚本行为完全一致，只是性能差异）。
+     */
+    fun isAvailable(context: android.content.Context): Boolean
+
     /** 在当前线程进入引擎上下文（Rhino 是 Context.enter + 参数设置）。 */
     fun enterContext(): JsContext
 

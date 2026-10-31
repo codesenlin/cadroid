@@ -23,6 +23,9 @@ class RhinoEngine : JsEngine {
 
     override val name: String = "Rhino"
 
+    /** Rhino 是纯 Java 实现，不依赖 .so，任何设备都可用（也是 QuickJS 的最终回退）。 */
+    override fun isAvailable(context: android.content.Context): Boolean = true
+
     override fun enterContext(): JsContext {
         val cx = RhinoAndroidHelper().enterContext()
         cx.setOptimizationLevel(-1)

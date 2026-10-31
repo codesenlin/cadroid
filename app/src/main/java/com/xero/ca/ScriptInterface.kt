@@ -147,6 +147,9 @@ class ScriptInterface(manager: ScriptManager) {
     fun createFrameLayout(callback: RhinoFrameLayout.Callback?): RhinoFrameLayout =
         RhinoFrameLayout(mContext, callback)
 
+    /** 当前脚本引擎名（"Rhino" / "QuickJS"），排查回退问题时用。 */
+    fun getScriptEngine(): String = mManager.getEngine().name
+
     fun getShellVersion(): Int = BuildConfig.SHELL_VERSION
 
     fun getVersionCode(): Int = BuildConfig.VERSION_CODE

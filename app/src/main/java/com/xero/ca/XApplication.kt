@@ -26,14 +26,23 @@ class XApplication : Application() {
         // GDT_ENABLED 为 false 表示构建时没装配优量汇（缺 GDTActionSDK aar），直接跳过。
         val gdtAppId = Secret.getGDTAppID()
         if (BuildConfig.GDT_ENABLED && !gdtAppId.isNullOrEmpty()) {
-            try {
-                GDTAdSdk.initWithoutStart(this, gdtAppId)
-                GDTAdSdk.start(null)
-                GdtState.ready = true
-            } catch (t: Throwable) {
-                // 缺 libturingad.so 时抛的是 UnsatisfiedLinkError（Error，不是 Exception），
-                // 只装 base 包（不带 ABI 分体）的设备会走到这里。广告关掉，应用照常跑。
-                android.util.Log.w("CA", "优量汇初始化失败，广告功能关闭: " + t.message)
+            if (!GdtSupport.isAbiSupported()) {
+                // GDT 的 libturingad.so 只覆盖 ARM；x86/x86_64/riscv64 等设备上
+                // 连初始化都不做，避免 SDK 内部尝试加载 so 后留下半初始化状态。
+                GdtState.reason =
+                    "当前设备 ABI（" + GdtSupport.describeAbis() + "）不支持优量汇原生库（仅 ARM），广告关闭"
+                Log.i("CA", GdtState.reason!!)
+            } else {
+                try {
+                    GDTAdSdk.initWithoutStart(this, gdtAppId)
+                    GDTAdSdk.start(null)
+                    GdtState.ready = true
+                } catch (t: Throwable) {
+                    // 缺 libturingad.so 时抛的是 UnsatisfiedLinkError（Error，不是 Exception），
+                    // 只装 base 包（不带 ABI 分体）的设备会走到这里。广告关掉，应用照常跑。
+                    GdtState.reason = "优量汇初始化失败: " + t.message
+                    Log.w("CA", "优量汇初始化失败，广告功能关闭: " + t.message)
+                }
             }
         }
         // 记下系统原来的处理器，崩溃时先自己上报，再交还给它
