@@ -116,7 +116,11 @@ class ScriptService : Service() {
         val core = File(base, "core.js")
         if (!core.isFile) return
         val sign = File(base, "core.sign")
-        mManager?.setHotfix(core.path, sign.path, Secret.getVerifyKey(), BuildConfig.VERSION_CODE)
+        // 双 key 兼容：优先我们自己的热更新公钥，同时接受作者原版公钥签的官方热更新
+        val verifyKeys = listOf(Secret.getVerifyKey(), Secret.getLegacyVerifyKey())
+            .filter { it.isNotEmpty() }
+        if (verifyKeys.isEmpty()) return
+        mManager?.setHotfix(core.path, sign.path, verifyKeys, BuildConfig.VERSION_CODE)
     }
 
     companion object {

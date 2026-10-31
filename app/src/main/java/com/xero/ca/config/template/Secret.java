@@ -33,6 +33,13 @@ public class Secret {
         return Base64.decode(HOTFIX_PUBLIC_KEY, Base64.DEFAULT);
     }
 
+    /** 兼容用的作者原版热更新公钥；模板留空（= 只认 getVerifyKey() 那一把） */
+    private static final String LEGACY_HOTFIX_PUBLIC_KEY = "";
+
+    public static byte[] getLegacyVerifyKey() {
+        return Base64.decode(LEGACY_HOTFIX_PUBLIC_KEY, Base64.DEFAULT);
+    }
+
     /** Gitee OAuth 应用 client id，空字符串表示不使用 Gitee 登录/反馈 */
     public static String getGiteeClientId() {
         return "";

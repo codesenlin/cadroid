@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.content.pm.SigningInfo
 import android.os.Build
+import android.util.Log
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -71,10 +72,10 @@ class ScriptFileStream private constructor(key: ByteArray?, stream: InputStream?
             cx: Context,
             sourceFile: String,
             signFile: String,
-            verify: ByteArray,
+            verifyKeys: List<ByteArray>,
             versionCode: Int,
         ): InputStream {
-            verifyFile(sourceFile, signFile, verify, versionCode)
+            verifyFile(sourceFile, signFile, verifyKeys, versionCode)
             return openWithKeyRotation(cx) { FileInputStream(sourceFile) }
         }
 
@@ -214,33 +215,43 @@ class ScriptFileStream private constructor(key: ByteArray?, stream: InputStream?
         private fun verifyFile(
             sourceFile: String,
             signFile: String,
-            verify: ByteArray,
+            verifyKeys: List<ByteArray>,
             versionCode: Int,
         ) {
             try {
-                FileInputStream(sourceFile).use { stream ->
-                    val signature = java.security.Signature.getInstance("SHA256withRSA")
-                    val kf = KeyFactory.getInstance("RSA")
-                    val spec: KeySpec = X509EncodedKeySpec(verify)
-                    val pk: PublicKey = kf.generatePublic(spec)
-                    signature.initVerify(pk)
-                    val buf = ByteArray(4096)
-                    var readBytes = stream.read(buf)
-                    while (readBytes >= 0) {
-                        signature.update(buf, 0, readBytes)
-                        readBytes = stream.read(buf)
-                    }
-                    val sign = getFileBytes(signFile)
-                    if (sign.size < 4) throw SignatureException("Signature is not available")
-                    val signVer = readIntLE(sign, 0)
-                    // 允许同版本号的热更新（重打同一版本时不用先抬 versionCode），只拒绝比当前版本更旧的
-                    if (signVer < versionCode) {
-                        throw SignatureException("Version $signVer is too low")
-                    }
-                    if (!signature.verify(sign, 4, sign.size - 4)) {
-                        throw SignatureException("Signature not correct")
+                val keys = verifyKeys.filter { it.isNotEmpty() }
+                if (keys.isEmpty()) throw SignatureException("No verification key")
+                val sign = getFileBytes(signFile)
+                if (sign.size < 4) throw SignatureException("Signature is not available")
+                val signVer = readIntLE(sign, 0)
+                // 允许同版本号的热更新（重打同一版本时不用先抬 versionCode），只拒绝比当前版本更旧的
+                if (signVer < versionCode) {
+                    throw SignatureException("Version $signVer is too low")
+                }
+                val source = getFileBytes(sourceFile)
+                val kf = KeyFactory.getInstance("RSA")
+                var last: Exception? = null
+                // 双 key 兼容：先试我们自己的公钥，再试作者原版公钥，任一通过即可
+                for ((index, verify) in keys.withIndex()) {
+                    try {
+                        val signature = java.security.Signature.getInstance("SHA256withRSA")
+                        val spec: KeySpec = X509EncodedKeySpec(verify)
+                        val pk: PublicKey = kf.generatePublic(spec)
+                        signature.initVerify(pk)
+                        signature.update(source)
+                        if (signature.verify(sign, 4, sign.size - 4)) {
+                            Log.i(
+                                "ScriptFileStream",
+                                "热更新验签通过（第 ${index + 1} 把公钥，共 ${keys.size} 把）"
+                            )
+                            return
+                        }
+                        last = SignatureException("Signature not correct (key #${index + 1})")
+                    } catch (e: Exception) {
+                        last = e
                     }
                 }
+                throw SignatureException("Signature not correct").apply { initCause(last) }
             } catch (e: Exception) {
                 throw IOException("Verification failed", e)
             }

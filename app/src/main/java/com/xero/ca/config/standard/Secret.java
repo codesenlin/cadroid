@@ -11,8 +11,8 @@ import android.util.Base64;
  * 注意它们分别属于作者的 TalkingData / 优量汇 / Gitee 账号；要换成自己的账号，
  * 请改本机的 Secret.java（优先级见 app/build.gradle：本机 > 默认 > 模板）。
  *
- * 热更新校验公钥是例外：必须配我们自己的 privateKey.pem（CA 的 shellWriteHotfixSign
- * 用它签名），所以这里不是作者那把。
+ * 热更新校验公钥是例外：优先用我们自己的 privateKey.pem（CA 的 shellWriteHotfixSign
+ * 用它签名），同时额外内置作者原版公钥做兼容——两把 key 任一验过就接受热更新。
  *
  * 用法：把本文件复制成 app/src/main/java/com/xero/ca/config/local/Secret.java 填自己的值即可
  * （那个路径已被 .gitignore 忽略，不会被提交）。合并是**逐条**的：某个 getter 在
@@ -39,7 +39,7 @@ public class Secret {
     /** 自建反馈平台 token（作者的） */
     private static final String GITEE_FEEDBACK_TOKEN = "f118a45cb3fb1925212bf1807933185b";
 
-    // ===== 热更新公钥：用我们自己的，不是作者的 =====
+    // ===== 热更新公钥：我们自己的为主，作者原版兼容 =====
 
     /**
      * 热更新（core.js / core.sign）校验用的 RSA 公钥（X.509 SubjectPublicKeyInfo DER）。
@@ -56,6 +56,22 @@ public class Secret {
 
     public static byte[] getVerifyKey() {
         return Base64.decode(HOTFIX_PUBLIC_KEY, Base64.DEFAULT);
+    }
+
+    /**
+     * 作者原版（上游 cadroid 正式包）的热更新公钥，从作者 APK 的 Secret.getVerifyKey()
+     * 提取（294 字节 X.509 DER）。用于**双 key 兼容**：App 依次用上面的
+     * getVerifyKey()（我们的）和这里的作者公钥验证 core.sign，任一通过即接受。
+     *
+     * 这样既能装我们用 CA shellBuildRelease 签的热更新，也能装作者官方签的热更新。
+     * 作者这把是公钥（不是秘密）；如果不需要兼容作者热更新，可只在私人 Secret 里
+     * 覆盖 getLegacyVerifyKey() 返回自己的过渡 key。
+     */
+    private static final String LEGACY_HOTFIX_PUBLIC_KEY =
+            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwPh1mxq/dFjSsS6tRTddqZq09RdMEENMLilpsrUB06ej1IXcFripjP336CIVrqtALkMKs+t4r07YE/VBgn4aPvXBX/tafSzswqsiPal6rSNLZSyELxIuprccum0XqDIZ5TWWUIvvSpdQnOvbBdWon+HCyPJefPcrD2pjRDsSt55XfBJbIGr7KdqByX/JLkduXpTQh3rqKG+mvozrwej7hfmstunmBiSnlTnBZ38NDmecbC4m+6nxJEfovv/Zjr+SAr+uzwxfbCDqYrcTtIKFeUjZ5TLklxA56cvaxW9Fb+s7fBSeDHcp+1LIUjQJh0xSUQPrnSBCqAzkHG23bOi9pQIDAQAB";
+
+    public static byte[] getLegacyVerifyKey() {
+        return Base64.decode(LEGACY_HOTFIX_PUBLIC_KEY, Base64.DEFAULT);
     }
 
     public static String getTDToken() {

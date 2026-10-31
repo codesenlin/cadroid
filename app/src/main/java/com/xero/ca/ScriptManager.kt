@@ -98,8 +98,8 @@ class ScriptManager private constructor() {
         engine.callFunction(c, scope, name, args)
     }
 
-    fun setHotfix(coreFile: String, signFile: String, verify: ByteArray, versionCode: Int) {
-        hotfix = Hotfix(coreFile, signFile, verify, versionCode)
+    fun setHotfix(coreFile: String, signFile: String, verifyKeys: List<ByteArray>, versionCode: Int) {
+        hotfix = Hotfix(coreFile, signFile, verifyKeys, versionCode)
     }
 
     fun setCacheDir(cacheDir: String) {
@@ -286,12 +286,12 @@ class ScriptManager private constructor() {
     inner class Hotfix(
         private val coreFile: String,
         private val signFile: String,
-        private val verify: ByteArray,
+        private val verifyKeys: List<ByteArray>,
         private val versionCode: Int,
     ) {
         @Throws(IOException::class)
         fun getInputStream(): InputStream =
-            ScriptFileStream.fromFile(bindContext!!, coreFile, signFile, verify, versionCode)
+            ScriptFileStream.fromFile(bindContext!!, coreFile, signFile, verifyKeys, versionCode)
     }
 
     companion object {

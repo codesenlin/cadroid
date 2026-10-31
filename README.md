@@ -120,8 +120,13 @@ Secret 配置（逐条合并）:
   ...
 ```
 
-热更新校验公钥是公开信息，`standard` / `template` 里都写死同一份（我们自己的那张，配
-`app/signatures/privateKey.pem`），换签名密钥时记得同步。
+热更新校验公钥是公开信息，默认配置里有**两把**（双 key 兼容）：
+
+- `getVerifyKey()`：我们自己的公钥，配 `app/signatures/privateKey.pem`，由 CA 的
+  `shellBuildRelease` 签热更新包；换签名密钥时同步更新这一把
+- `getLegacyVerifyKey()`：作者原版正式包里的公钥，用于兼容作者签发的官方热更新
+
+`core.sign` 会用两把 key 依次验签，**任一通过即接受**；两把都不通过才拒绝。
 
 ## 文档
 
