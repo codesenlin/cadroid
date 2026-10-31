@@ -9,9 +9,7 @@ import com.xero.ca.script.engine.JsEngine
 import com.xero.ca.script.engine.JsScope
 import com.xero.ca.script.engine.JsEngines
 import com.xero.ca.script.engine.JsScript
-import com.xero.ca.script.engine.QuickJsEngine
 import com.xero.ca.script.engine.RhinoEngine
-import com.xero.ca.script.engine.ScriptHealth
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileReader
@@ -20,9 +18,6 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.Reader
 import java.lang.ref.WeakReference
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 脚本引擎的管理者：负责加载/编译脚本、在独立线程里跑事件循环。
@@ -58,7 +53,6 @@ class ScriptManager private constructor() {
         // 双引擎：auto 模式下 QuickJS 可靠时优先（加速），状态不好则 Rhino 兜底。
         // 不可用设备（如 32 位 ARM、小众 ABI）JsEngines 内部自动回退 Rhino。
         engine = JsEngines.select(ctx)
-        fallbackStarted.set(false)
         // 先创建 ScriptInterface：启动页 onSplashActivityCreate 会检查它是否存在，
         // 晚于启动页创建的话 SplashActivity 会直接 finish，广告回调也就不会触发 startScript。
         scriptInterface = initScriptInterface()
@@ -247,23 +241,8 @@ class ScriptManager private constructor() {
             // 否则直接崩在启动阶段。
             if (scriptInterface == null) scriptInterface = initScriptInterface()
             if (!initScriptRuntime()) {
-                // 运行时才发现不可用（例如 .so 存在但加载失败）：回退 Rhino 再试一次
-                if (engine.name != "Rhino") {
-                    Log.w("Script", "脚本引擎 ${engine.name} 初始化失败，回退 Rhino", lastInitError)
-                    try {
-                        engine.exitContext()
-                    } catch (_: Throwable) {
-                    }
-                    ScriptHealth.markQuickJsBroken(bindContext, "引擎初始化失败")
-                    engine = RhinoEngine()
-                    if (!initScriptRuntime()) {
-                        reportEngineError(lastInitError)
-                        return false
-                    }
-                } else {
-                    reportEngineError(lastInitError)
-                    return false
-                }
+                reportEngineError(lastInitError)
+                return false
             }
             try {
                 val time = SystemClock.uptimeMillis()
@@ -282,95 +261,7 @@ class ScriptManager private constructor() {
             } else {
                 scriptInterface?.onScriptReady()
             }
-            if (engine is QuickJsEngine) {
-                startQuickJsHealthMonitor()
-            }
             return true
-        }
-    }
-
-    // ---------- QuickJS 健康监控（状态不好自动退回 Rhino） ----------
-
-    private val fallbackStarted = AtomicBoolean(false)
-
-    @Volatile
-    private var healthMonitorRunning = false
-
-    /**
-     * QuickJS 健康监控：
-     *  - 主线程看门狗：每 500ms 往主线程投一个空任务，超过 4s 没执行 → 认为卡死
-     *  - 慢回调：QuickJS 上单个 JS 回调 > 2.5s 的累计 3 次 → 认为状态不佳
-     *  - 启动 90s 内没有触发回退 → 标记 QuickJS 可靠（后续 auto 模式继续用）
-     */
-    private fun startQuickJsHealthMonitor() {
-        if (healthMonitorRunning) return
-        healthMonitorRunning = true
-        val engineRef = engine as? QuickJsEngine ?: return
-        Thread({
-            val start = SystemClock.uptimeMillis()
-            try {
-                while (healthMonitorRunning) {
-                    val h = handler ?: break
-                    val latch = CountDownLatch(1)
-                    val t0 = SystemClock.uptimeMillis()
-                    h.post { latch.countDown() }
-                    val done = latch.await(9, TimeUnit.SECONDS)
-                    val blocked = SystemClock.uptimeMillis() - t0
-                    val elapsed = SystemClock.uptimeMillis() - start
-                    if (blocked > 1500) Log.w("Script", "主线程响应慢: " + blocked + "ms")
-                    // 启动阶段（前 20s）脚本初始化本来就会长时间占主线程（没有用户输入，
-                    // 不会触发输入 ANR），这段只记录不判定；稳定期再按 4s 判定
-                    val settle = elapsed < 20_000
-                    if (!settle && (!done || blocked > 4000)) {
-                        fallbackToRhino("主线程阻塞 ${blocked}ms")
-                        return@Thread
-                    }
-                    if (!settle && engineRef.slowCallbackCount >= 2) {
-                        fallbackToRhino("JS 回调过慢（${engineRef.slowCallbackCount} 次）")
-                        return@Thread
-                    }
-                    if (elapsed > 120_000) {
-                        ScriptHealth.markQuickJsOk(bindContext)
-                        Log.i("Script", "QuickJS 启动阶段状态良好，保持使用")
-                        return@Thread
-                    }
-                    Thread.sleep(500)
-                }
-            } catch (_: InterruptedException) {
-            } catch (t: Throwable) {
-                Log.w("Script", "QuickJS 健康监控异常", t)
-            }
-        }, "CA-EngineHealth").apply { isDaemon = true }.start()
-    }
-
-    /** QuickJS 状态不佳：标记不可靠，并当场重启脚本走 Rhino（同一进程内）。 */
-    private fun fallbackToRhino(reason: String) {
-        if (!fallbackStarted.compareAndSet(false, true)) return
-        healthMonitorRunning = false
-        Log.w("Script", "QuickJS 状态不佳（$reason），切换 Rhino 兜底")
-        ScriptHealth.markQuickJsBroken(bindContext, reason)
-        val h = handler
-        if (h == null) return
-        h.post {
-            try {
-                callScriptHook("unload", arrayOf())
-            } catch (_: Throwable) {
-            }
-            try {
-                scriptInterface?.clearBridge()
-            } catch (_: Throwable) {
-            }
-            shutdownRuntime()
-            running = false
-            engine = RhinoEngine()
-            val ctx = bindContext
-            val src = sourceName
-            if (ctx != null && src != null) {
-                running = true
-                scriptInterface = initScriptInterface()
-                Log.i("Script", "已切换 Rhino，重新准备脚本")
-                startPrepareThread(ctx, src, true)
-            }
         }
     }
 
@@ -400,7 +291,6 @@ class ScriptManager private constructor() {
 
     inner class ExitCommand(private val callUnload: Boolean) : Runnable {
         override fun run() {
-            healthMonitorRunning = false
             if (callUnload) callScriptHook("unload", arrayOf())
             scriptInterface?.clearBridge()
             if (engine.requiresMainThread) {

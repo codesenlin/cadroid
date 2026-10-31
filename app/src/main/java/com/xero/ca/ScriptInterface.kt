@@ -150,9 +150,6 @@ class ScriptInterface(manager: ScriptManager) {
     /** 当前脚本引擎名（"Rhino" / "QuickJS"），排查回退问题时用。 */
     fun getScriptEngine(): String = mManager.getEngine().name
 
-    /** 双引擎模式：auto / rhino / quickjs（脚本里可读写，重启生效）。 */
-    fun getScriptEngineMode(): String = com.xero.ca.script.engine.ScriptHealth.engineMode(mContext)
-
     // ---------- QuickJS 侧载加速 worker（Rhino 主引擎调用，纯 JS 计算） ----------
 
     /** worker 是否可用。 */
@@ -186,14 +183,6 @@ class ScriptInterface(manager: ScriptManager) {
             "globalThis.$safe = JSON.parse(\"$escaped\"); true"
         ) == "true"
     }
-
-    fun setScriptEngineMode(mode: String) {
-        com.xero.ca.script.engine.ScriptHealth.setEngineMode(mContext, mode)
-    }
-
-    /** 给脚本/排查用：当前引擎健康状态描述。 */
-    fun getScriptEngineHealth(): String =
-        com.xero.ca.script.engine.ScriptHealth.describe(mContext) + " current=" + mManager.getEngine().name
 
     /** HTTP 回调（脚本侧用 JS 对象实现）。 */
     @androidx.annotation.Keep

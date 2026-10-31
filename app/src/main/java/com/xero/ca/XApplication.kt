@@ -21,14 +21,6 @@ import kotlin.system.exitProcess
 class XApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // QuickJS 实验路径：脚本整个生命周期在主线程（QuickJS 单线程 + Android UI 限制），
-        // 但脚本里有同步网络请求，主线程默认会被 StrictMode 拦成 NetworkOnMainThreadException。
-        // 实验阶段先放宽（正式执行引擎如果定 QuickJS，需要把这些网络调用改成异步）。
-        if (!BuildConfig.JS_ENGINE.equals("rhino", ignoreCase = true)) {
-            android.os.StrictMode.setThreadPolicy(
-                android.os.StrictMode.ThreadPolicy.Builder().permitNetwork().build()
-            )
-        }
         TalkingDataSDK.initSDK(applicationContext, Secret.getTDToken(), "default", "")
         // 优量汇（GDT）广告 SDK：AppID 从 4.x 起只能通过这里传入，必须在请求广告前初始化。
         // GDT_ENABLED 为 false 表示构建时没装配优量汇（缺 GDTActionSDK aar），直接跳过。

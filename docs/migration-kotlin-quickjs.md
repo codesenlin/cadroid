@@ -224,6 +224,58 @@ Java 异常消息、Java 侧调 JS 全局函数（`callFunction`）。
 候选：`io.github.taoweiji.quickjs:quickjs-android:1.4.6`（Maven Central，Apache-2.0，
 四种 ABI，提供 `JSFunction.call` / `registerJavaMethod` / `addJavascriptInterface`）。
 
+### E2.16：改用 quickjs-kt（16KB、社区维护）替代自编译版（2026-10-31 下午）
+
+E2.15 自编译的极简 JNI 已验证可用（40x），但社区里后来发现
+`io.github.dokar3:quickjs-kt-android:1.0.15`（2026-09 发布）的 `.so`
+**已经是 16KB 对齐**（早先查的 1.0.0-alpha13 还是 4KB，Maven 搜索接口的
+latestVersion 是过期的）。最终改用社区维护库：
+
+- 依赖：`io.github.dokar3:quickjs-kt-android:1.0.15`（Apache-2.0，四 ABI，
+  LOAD align=0x4000）
+- `QuickJsWorker` 改为 quickjs-kt API：`QuickJs.create(Dispatchers.Default)` +
+  `runBlocking { evaluate<Any?>(code) }`，结果统一 `toString()` 回传
+  （quickjs-kt 会把 JS 布尔/数字转成 Kotlin 类型，worker 协议要求字符串）
+- 删除自编译产物：`jniLibs/libcaquickjs.so`、`tools/quickjs-16k/`、CaQuickJS.kt
+- quickjs-kt AAR minSdk=23：App 保持 minSdk 21，manifest 用
+  `tools:overrideLibrary="com.dokar.quickjs"`，API<23 的设备不启用 worker
+  （纯计算加速是可选项，不影响脚本）
+- 实测（真机）：纯 JS 基准 n=50000 Rhino 2471ms vs QuickJS 52ms（~47x）；
+  命令匹配 3000 条 Rhino 162ms vs QuickJS 稳态 ~16ms（首次同步 415ms）；
+  `regOk=true`、结果一致
+- APK 体积 8.4MB，所有 native 库（libquickjs.so / libturingad.so）均
+  16KB 对齐
+
+### E2.15：16KB page size 兼容 —— 自编译极简 QuickJS（2026-10-31 下午）
+
+Android 15+ 的 16KB page size 设备要求 native 库 ELF LOAD 段 16KB 对齐，
+否则 .so 加载失败、Play 也会拒包。排查了常见 QuickJS Android 库：
+
+| 库 | .so LOAD 对齐 |
+|---|---|
+| io.github.taoweiji:quickjs-android:1.4.6（原用） | 0x1000（4KB）✗ |
+| app.cash.quickjs:0.9.2 | 0x1000 ✗ |
+| com.github.penfeizhou:quickjs4a:0.0.3 | 0x1000 ✗ |
+| io.github.dokar3:quickjs-kt-android:1.0.0-alpha13 | 0x1000 ✗ |
+
+**结论：没有现成的 16KB QuickJS AAR。** 既然侧载 worker 只需要
+"给一段 JS、拿回字符串"，直接自编译一个极简绑定：
+
+- `tools/quickjs-16k/ca_quickjs.c`：117 行 JNI，只暴露
+  `nativeCreate` / `nativeEval` / `nativeClose`（UTF-8 ↔ Java String 正确转码）
+- quickjs-ng（0.17.0）源码 + NDK r27c：
+  `-O2 -fPIC -shared -Wl,-z,max-page-size=16384`，四个 ABI
+  （arm64-v8a / armeabi-v7a / x86 / x86_64）全部 **LOAD align=0x4000**
+- 产物入库 `app/src/main/jniLibs/<abi>/libcaquickjs.so`；
+  重编脚本 `tools/quickjs-16k/build.sh`（NDK 路径可用环境变量覆盖）
+- 同时删掉 taoweiji 依赖与 QuickJS 主引擎（QuickJsEngine/BridgeHost/prelude/
+  ScriptHealth/健康监控），代码大幅精简：脚本只跑 Rhino，worker 用新库
+- 真机验证：worker 可用，纯 JS 基准（n=50000）Rhino 2429ms vs QuickJS 61ms
+  （~40x），命令匹配结果一致
+
+最终 APK 内所有 .so（libcaquickjs.so、libturingad.so）均 16KB 对齐，
+满足 Android 15+ 16KB 设备与 Play 要求。
+
 ### E2.14：QuickJS 线收尾（2026-10-31 下午）
 
 真机日志显示 Rhino 下已无明显主线程卡点（卡顿探针只采到 1 条系统噪音），

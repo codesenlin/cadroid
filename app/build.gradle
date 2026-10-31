@@ -33,13 +33,6 @@ def caaccelAvailable = file('libs/caaccel.jar').exists()
 // 切换方式：gradle.properties 里改 ca.rhinoCompat，或命令行 -Pca.rhinoCompat=false
 def rhinoCompat = (findProperty('ca.rhinoCompat') ?: 'true') != 'false'
 
-// JS 引擎选择（E1 实验用）：
-//   rhino   = 默认，当前生产引擎
-//   quickjs = 尝试 QuickJS（E1 阶段只有 compile/execute，Java 桥在 E2，
-//             真实脚本跑不了，仅用于验证引擎本身）
-// 默认 rhino（稳定快）；QuickJS 侧载 worker 在 Rhino 下提供纯 JS 加速。
-// 实验主引擎：-Pca.jsEngine=quickjs（强制）或 auto（状态好时用 QuickJS，不好自动回 Rhino）
-def jsEngine = (findProperty('ca.jsEngine') ?: 'rhino').toString().toLowerCase()
 
 android {
     namespace = 'com.xero.ca'
@@ -77,7 +70,6 @@ android {
         buildConfigField "int", "SHELL_VERSION", "26"
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField "boolean", "GDT_ENABLED", gdtAvailable.toString()
-        buildConfigField "String", "JS_ENGINE", "\"${jsEngine}\""
         multiDexEnabled = true
     }
     buildTypes {
@@ -149,11 +141,6 @@ dependencies {
         implementation files('libs/caaccel.jar')
     }
 
-    // QuickJS 引擎（E1 起引入；-Pca.jsEngine=quickjs 才启用，默认仍走 Rhino）
-    // taoweiji 的绑定（seven332/quickjs-android 维护分支）：带四种 ABI 的 so，
-    // 且暴露 JSFunction.call / registerJavaMethod，能实现 Rhino 的接口适配器。
-    // 小众 ABI 上 isAvailable() 失败会回退 Rhino（见 JsEngines.kt）。
-    implementation 'io.github.taoweiji.quickjs:quickjs-android:1.4.6'
 
     implementation 'androidx.annotation:annotation:1.11.0'
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
@@ -165,6 +152,9 @@ dependencies {
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
+    // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
+    implementation 'io.github.dokar3:quickjs-kt-android:1.0.15'
+
     implementation 'org.mozilla:rhino:1.9.2'
     // E4X（XML 字面量）支持：1.8 起从核心拆成独立模块，老脚本可能用到
     implementation 'org.mozilla:rhino-xml:1.9.2'

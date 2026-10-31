@@ -48,7 +48,6 @@
 # Scripting
 # QuickJS 桥：JS 侧通过 __caBridge.call / scriptInterfaceHandle 按方法名调用，
 # R8 混淆接口方法名后 JS 看到的是 a/b 之类的名字，会直接 "not a function"。
--keep class com.xero.ca.script.engine.quickjs.** { *; }
 
 -keep @com.xero.ca.script.ScriptObject public class *{
     public *;
