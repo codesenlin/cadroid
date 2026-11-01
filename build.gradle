@@ -5,6 +5,15 @@ buildscript {
         resolutionStrategy {
             force 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21'
             force 'org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.21'
+
+            // Dependabot 告警的 buildscript 传递依赖：这些不进 APK，但构建期会加载；
+            // 统一抬到已修复版本，避免 AGP 自带旧版本再次被扫描出来。
+            force 'com.google.guava:guava:33.7.2-jre'                 // GHSA-xxph-c9ww-hj94
+            force 'org.apache.commons:commons-lang3:3.18.0'      // GHSA-j288-q9x7-2f5v
+            force 'org.bitbucket.b_c:jose4j:0.9.6'               // GHSA-3677-xxcr-wjqv
+            force 'org.bouncycastle:bcpkix-jdk18on:1.85'         // GHSA-wg6q-6289-32hp
+            force 'org.bouncycastle:bcprov-jdk18on:1.85'         // GHSA-9pwp / c3fc / qp49
+            force 'org.jdom:jdom2:2.0.6.1'                       // GHSA-2363-cqg2-863c
         }
     }
 
