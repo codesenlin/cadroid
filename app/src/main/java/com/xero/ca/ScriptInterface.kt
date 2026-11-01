@@ -159,7 +159,9 @@ class ScriptInterface(manager: ScriptManager) {
     fun quickWorkerRegister(source: String): Boolean {
         // 从 "function name(" 里提取函数名
         val name = Regex("function\\s+([A-Za-z0-9_$]+)\\s*\\(").find(source)?.groupValues?.get(1) ?: return false
+        // 多行函数源要转义换行，否则 eval("...") 里的字符串字面量直接断行
         val escaped = source.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "")
         com.xero.ca.script.engine.QuickJsWorker.eval("eval(\"$escaped\"); true") ?: return false
         return com.xero.ca.script.engine.QuickJsWorker.eval("typeof $name === 'function'") == "true"
     }
@@ -179,9 +181,14 @@ class ScriptInterface(manager: ScriptManager) {
         val safe = name.filter { it.isLetterOrDigit() || it == '_' }
         if (safe.isEmpty()) return false
         val escaped = json.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "")
-        return com.xero.ca.script.engine.QuickJsWorker.eval(
+        val result = com.xero.ca.script.engine.QuickJsWorker.eval(
             "globalThis.$safe = JSON.parse(\"$escaped\"); true"
-        ) == "true"
+        )
+        if (result != "true") {
+            android.util.Log.w("Script", "quickWorkerSetVar 失败: " + safe + " len=" + json.length + " => " +
+                (result ?: "null").take(500))
+        }
+        return result == "true"
     }
 
 
