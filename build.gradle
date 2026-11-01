@@ -23,7 +23,27 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.5.0'
+        // AGP 的传递依赖里会声明旧版本；只在 resolutionStrategy.force 里抬版本，
+        // GitHub 依赖图仍记录旧坐标。这里从 AGP 依赖树里 exclude 旧模块，再显式
+        // 加回修复版本，SBOM/Dependabot 才不会继续报旧版本。
+        classpath('com.android.tools.build:gradle:9.5.0') {
+            exclude group: 'com.google.guava', module: 'guava'
+            exclude group: 'org.apache.commons', module: 'commons-lang3'
+            exclude group: 'org.bitbucket.b_c', module: 'jose4j'
+            exclude group: 'org.bouncycastle', module: 'bcpkix-jdk18on'
+            exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+            exclude group: 'org.bouncycastle', module: 'bcutil-jdk18on'
+            exclude group: 'org.jdom', module: 'jdom2'
+        }
+
+        // 被上面 exclude 的模块：显式补上修复版本
+        classpath 'com.google.guava:guava:33.7.2-jre'
+        classpath 'org.apache.commons:commons-lang3:3.18.0'
+        classpath 'org.bitbucket.b_c:jose4j:0.9.6'
+        classpath 'org.bouncycastle:bcpkix-jdk18on:1.85'
+        classpath 'org.bouncycastle:bcprov-jdk18on:1.85'
+        classpath 'org.bouncycastle:bcutil-jdk18on:1.85'
+        classpath 'org.jdom:jdom2:2.0.6.1'
     }
 }
 
