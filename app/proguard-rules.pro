@@ -2,7 +2,7 @@
 # By default, the flags in this file are appended to flags specified
 # in C:\tools\adt-bundle-windows-x86_64-20131030\sdk/tools/proguard/proguard-android.txt
 # You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
+# directive in build.gradle.kts.
 #
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
@@ -89,3 +89,6 @@
 # 脚本里 XML() 和 <a/> 字面量就会报 "XML 未定义"。
 -keep class org.mozilla.javascript.xmlimpl.XMLLoaderImpl { *; }
 -keepnames class org.mozilla.javascript.xml.** { *; }
+
+# rhino-engine 的 JSR-223 接口在 Android 上不存在（未走 javax.script 路径）
+-dontwarn javax.script.**

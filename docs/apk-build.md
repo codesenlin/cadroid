@@ -93,7 +93,7 @@ java -jar tools/bundletool.jar install-apks --apks=build/dist/命令助手.apks
 - 所以调试包也必须走 R8 的 dex 流程，否则 `assembleDebug` 直接
   `Error while dexing`
 
-这个模式用开关控制（`app/build.gradle` 的 `rhinoCompat`）：
+这个模式用开关控制（`app/build.gradle.kts` 的 `rhinoCompat`）：
 
 ```properties
 # gradle.properties

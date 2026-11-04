@@ -68,7 +68,7 @@ foojay-resolver，缺了会自动下载（Android Studio 用的是它自带的 J
 
 1. 到 <https://www.talkingdata.com/> 按官方流程注册账号并定制专属 SDK，最新版本会发到你指定的邮箱
 2. 解压后把 `.jar` 放进 `app/libs/`
-3. 改 `app/build.gradle` 里**两处**文件名（`tdAvailable` 的判断、以及 `implementation files(...)`），
+3. 改 `app/build.gradle.kts` 里**两处**文件名（`tdAvailable` 的判断、以及 `implementation(files(...))`），
    让它们和你刚放进来的文件名一致
 4. Sync / 重新构建
 
@@ -77,7 +77,7 @@ foojay-resolver，缺了会自动下载（Android Studio 用的是它自带的 J
 1. 按官方指引 <https://datanexus.qq.com/doc/develop/guider/sdk/android/init> 下载
    [GDT_ActionSDK_Android.zip](https://sr-home-1257214331.file.myqcloud.com/sdk/dmp-sdk-android/GDT_ActionSDK_Android.zip?t=1)
 2. 解压后把 `.aar` 放进 `app/libs/`
-3. 改 `app/build.gradle` 里**两处**文件名（`gdtAvailable` 的判断、以及 `implementation files(...)`）
+3. 改 `app/build.gradle.kts` 里**两处**文件名（`gdtAvailable` 的判断、以及 `implementation(files(...))`）
 4. Sync / 重新构建
 
 > ⚠️ 这个 aar 带 arm 的 native 库（`armeabi` / `armeabi-v7a` / `arm64-v8a` 的 `libturingad.so`），
@@ -109,7 +109,7 @@ cp app/src/main/java/config/template/Secret.java \
 那么广告 AppID / 广告位 / Gitee 那几项会各自回退到默认配置的值；某一条在默认里也是空，
 才落回模板的空实现（该功能关闭）。
 
-**实现**：`app/secret-config.gradle` 在构建时解析这三份文件、逐条合并，生成
+**实现**：`app/secret-config.gradle.kts` 在构建时解析这三份文件、逐条合并，生成
 `com/xero/ca/gen/Secret.java` 参与编译（`config/` 整棵目录只当数据源，不参与编译）。
 构建日志会列出每一项最终来自哪份：
 

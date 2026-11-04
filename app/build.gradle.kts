@@ -1,4 +1,8 @@
-apply plugin: 'com.android.application'
+import org.gradle.api.tasks.util.PatternFilterable
+
+plugins {
+    id("com.android.application")
+}
 
 // 脚本（assets/script.js）是用「签名证书 DER 逐字节异或 + GZIP」加密的，
 // 所以签名用的密钥必须和 CA 侧 app/signatures/*.signature 里的证书一致。
@@ -6,8 +10,8 @@ apply plugin: 'com.android.application'
 //   debug 包  -> 由 Gradle 用它签名，配合 signatures/debug.signature
 //   release 包 -> 保持未签名（app-release-unsigned.apk），由 CA 的
 //                 cabuild shellBuildRelease（zipalign + apksigner）用它签名
-def caKeystore = file('signatures/release.keystore')
-def caPasswordFile = file('signatures/release.password')
+val caKeystore = file("signatures/release.keystore")
+val caPasswordFile = file("signatures/release.password")
 
 // 优量汇（GDT）的两个组件是配套使用的，必须有一起有、没有一起没有：
 //   - 广告 SDK：com.qq.e.union:union（Maven）
@@ -18,12 +22,12 @@ def caPasswordFile = file('signatures/release.password')
 //  - 默认看本地 aar 在不在
 //  - 也可以用 -Pca.withGdt=false 强制关掉（不装广告 SDK，APK 从 4.13 MB 降到 1.42 MB，
 //    且不再依赖只有 arm 版本的 libturingad.so —— 所有架构都能跑）
-def gdtRequested = (findProperty('ca.withGdt') ?: 'true') != 'false'
-def gdtAvailable = gdtRequested && file('libs/GDTActionSDK.min.1.9.8.aar').exists()
-def tdAvailable = file('libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar').exists()
+val gdtRequested = (findProperty("ca.withGdt") ?: "true").toString() != "false"
+val gdtAvailable = gdtRequested && file("libs/GDTActionSDK.min.1.9.8.aar").exists()
+val tdAvailable = file("libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar").exists()
 // 加速库：CA 仓库的 caaccel/build.sh 产出。缺失时只是不启用 Java 加速，
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
-def caaccelAvailable = file('libs/caaccel.jar').exists()
+val caaccelAvailable = file("libs/caaccel.jar").exists()
 
 // Rhino 兼容编译模式（Rhino 1.9 在 minSdk 21 下的 dex 兼容，见 docs/migration-kotlin-quickjs.md）：
 //   true  = 调试包也走 R8 的 dex 流程。Rhino 1.9 的 SlotMapOwner$ThreadedAccess
@@ -31,27 +35,27 @@ def caaccelAvailable = file('libs/caaccel.jar').exists()
 //           直接 "Error while dexing"
 //   false = 调试包退回普通的 debuggable 构建（只有把 Rhino 换掉之后才能关）
 // 切换方式：gradle.properties 里改 ca.rhinoCompat，或命令行 -Pca.rhinoCompat=false
-def rhinoCompat = (findProperty('ca.rhinoCompat') ?: 'true') != 'false'
+val rhinoCompat = (findProperty("ca.rhinoCompat") ?: "true").toString() != "false"
 
 
 android {
-    namespace = 'com.xero.ca'
+    namespace = "com.xero.ca"
     compileSdk = 37
 
     compileOptions {
-        coreLibraryDesugaringEnabled = true
+        isCoreLibraryDesugaringEnabled = true
         // 语言级别 21（Gradle 守护进程本身跑 JDK 25，见 gradle-daemon-jvm.properties）
-        sourceCompatibility JavaVersion.VERSION_25
-        targetCompatibility JavaVersion.VERSION_25
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
     signingConfigs {
         if (caKeystore.exists() && caPasswordFile.exists()) {
-            ca {
-                storeFile caKeystore
-                storePassword caPasswordFile.text.trim()
-                keyAlias 'testkey'
-                keyPassword caPasswordFile.text.trim()
+            create("ca") {
+                storeFile = caKeystore
+                storePassword = caPasswordFile.readText().trim()
+                keyAlias = "testkey"
+                keyPassword = caPasswordFile.readText().trim()
                 // 附加 V3 签名（APK Signature Scheme v3），v1/v2 一并保留以兼容旧系统
                 // Gradle 10 起必须用赋值语法；旧写法 enableV1Signing true 已弃用
                 enableV1Signing = true
@@ -62,52 +66,53 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.xero.ca"
-        minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 20759
-        versionName "1.2.15"
-        buildConfigField "int", "SHELL_VERSION", "26"
+        applicationId = "com.xero.ca"
+        minSdk = 21
+        targetSdk = 33
+        versionCode = 20759
+        versionName = "1.2.15"
+        buildConfigField("int", "SHELL_VERSION", "26")
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
-        buildConfigField "boolean", "GDT_ENABLED", gdtAvailable.toString()
-        multiDexEnabled = true
+        buildConfigField("boolean", "GDT_ENABLED", gdtAvailable.toString())
     }
     buildTypes {
-        debug {
-            debuggable true
+        getByName("debug") {
+            isDebuggable = true
             // Rhino 兼容编译模式（见文件开头的 rhinoCompat）：调试包也走 R8。
             // 不开启的话 assembleDebug 会直接报 "Error while dexing"。
-            minifyEnabled rhinoCompat
-            shrinkResources = false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            multiDexEnabled = true
-            // 没有 signatures/ 时退回 Android 默认调试签名（此时需自行重新生成 debug.signature）
-            signingConfig = signingConfigs.findByName('ca') ?: signingConfigs.debug
-            jniDebuggable true
+            isMinifyEnabled = rhinoCompat
+            isShrinkResources = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                // 没有 signatures/ 时退回 Android 默认调试签名（此时需自行重新生成 debug.signature）
+            signingConfig = signingConfigs.findByName("ca") ?: signingConfigs.getByName("debug")
+            isJniDebuggable = true
         }
-        release {
-            minifyEnabled true
-            shrinkResources = true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            debuggable false
-            jniDebuggable false
-            multiDexEnabled = true
-        }
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            isDebuggable = false
+            isJniDebuggable = false
+            }
     }
     sourceSets {
-        main {
+        getByName("main") {
             // 缺哪个本地依赖就把对应的空实现加进来，保证 clone 下来没有本地文件也能构建：
             //   src/stub/talkingdata  统计 SDK（TalkingData）缺失时
             //   src/stub/gdt          广告/转化 SDK 缺失时（两个一起缺席）
             if (!tdAvailable) {
-                java.srcDir 'src/stub/talkingdata'
+                java.directories.add("src/stub/talkingdata")
             }
             if (!gdtAvailable) {
-                java.srcDir 'src/stub/gdt'
+                java.directories.add("src/stub/gdt")
             }
-            // 三份配置文件只当数据源，由 secret-config.gradle 合并生成 com/xero/ca/gen/Secret.java
-            java.exclude 'com/xero/ca/config/**'
-            java.srcDir layout.buildDirectory.dir('generated/source/secret').get().asFile
+            // 三份配置文件只当数据源，由 secret-config.gradle.kts 合并生成 com/xero/ca/gen/Secret.java
+            // 新 DSL 的 directories 只支持目录，旧 exclude/filter 仍由内部实现提供
+            val mainJava = java
+            if (mainJava is PatternFilterable) {
+                mainJava.exclude("com/xero/ca/config/**")
+            }
+            java.directories.add(layout.buildDirectory.dir("generated/source/secret").get().asFile.path)
         }
     }
     buildFeatures {
@@ -122,42 +127,47 @@ android {
 
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     // 本地依赖不入库（见 app/libs/.gitignore）；缺失时用 src/stub 下的空实现编译（见 sourceSets）
     if (tdAvailable) {
-        implementation files('libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar')
+        implementation(files("libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar"))
     }
 
     if (gdtAvailable) {
         // 广告 SDK 与转化 SDK 配套：有 aar 就两个都加载，没有就两个都不加载
-        implementation files('libs/GDTActionSDK.min.1.9.8.aar')
-        implementation 'com.qq.e.union:union:4.712.1582'
+        implementation(files("libs/GDTActionSDK.min.1.9.8.aar"))
+        implementation("com.qq.e.union:union:4.712.1582")
     }
 
     // 命令助手高性能加速库（源码在 CA 仓库的 caaccel/，用 caaccel/build.sh 构建）
     // 可选：jar 不在时不引入，Rhino 里 Packages 解析失败，JS 侧自动走回退实现
     if (caaccelAvailable) {
-        implementation files('libs/caaccel.jar')
+        implementation(files("libs/caaccel.jar"))
     }
 
 
-    implementation 'androidx.annotation:annotation:1.11.0'
+    implementation("androidx.annotation:annotation:1.11.0")
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation("androidx.core:core-ktx:1.17.0")
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
-    implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
-    implementation 'net.lingala.zip4j:zip4j:2.11.6'
-    implementation 'org.java-websocket:Java-WebSocket:1.6.0'
+    implementation("com.jakewharton.android.repackaged:dalvik-dx:16.0.1")
+    implementation("net.lingala.zip4j:zip4j:2.11.6")
+    implementation("org.java-websocket:Java-WebSocket:1.6.0")
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
-    implementation 'org.mozilla:rhino:1.9.2'
+    implementation("org.mozilla:rhino:1.9.2")
+    implementation("org.mozilla:rhino-engine:1.9.2")
+    implementation("org.mozilla:rhino-kotlin:1.9.2")
     // E4X（XML 字面量）支持：1.8 起从核心拆成独立模块，老脚本可能用到
-    implementation 'org.mozilla:rhino-xml:1.9.2'
+    implementation("org.mozilla:rhino-xml:1.9.2")
     // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
-    implementation 'io.github.dokar3:quickjs-kt-android:1.0.15'
+    implementation("io.github.dokar3:quickjs-kt-android:1.0.15")
 }
 
-// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle
-apply from: 'secret-config.gradle'
+// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle.kts
+apply(from = "secret-config.gradle.kts")
+tasks.named("preBuild") {
+    dependsOn("generateSecret")
+}
