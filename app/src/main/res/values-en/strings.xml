@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Command Assistant</string>
+    <string name="as_description">Enable this for automatic pasting and other actions</string>
+    <string name="addle_name">Load as command library</string>
+    <string name="edited_name">Edit command</string>
+    <string name="default_loading_tip">Loading script engine</string>
+    <string name="skip_ad_text">Skip ad</string>
+    <string name="ad_seconds_left">%d seconds until the ad ends</string>
+
+</resources>
