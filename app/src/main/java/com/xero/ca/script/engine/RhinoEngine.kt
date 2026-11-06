@@ -3,6 +3,8 @@ package com.xero.ca.script.engine
 import android.util.Log
 import com.faendir.rhino_android.RhinoAndroidHelper
 import com.xero.ca.ScriptFileStream
+import com.xero.ca.ScriptInterface
+import com.xero.ca.script.KotlinJsBridge
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function
 import org.mozilla.javascript.NativeJavaObject
@@ -44,6 +46,13 @@ class RhinoEngine : JsEngine {
             scope,
             wrapFactory.wrapAsJavaObject(cx, scope, scriptInterface, scriptInterface.javaClass)
         )
+        if (scriptInterface is ScriptInterface) {
+            scope.put(
+                "JavaBridge",
+                scope,
+                wrapFactory.wrapAsJavaObject(cx, scope, KotlinJsBridge(scriptInterface.getContext()), KotlinJsBridge::class.java)
+            )
+        }
         return JsScope(scope)
     }
 
