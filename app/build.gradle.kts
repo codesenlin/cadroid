@@ -69,8 +69,8 @@ android {
         applicationId = "com.xero.ca"
         minSdk = 21
         targetSdk = 33
-        versionCode = 20759
-        versionName = "1.2.15"
+        versionCode = 20765
+        versionName = "1.2.16"
         buildConfigField("int", "SHELL_VERSION", "26")
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField("boolean", "GDT_ENABLED", gdtAvailable.toString())
