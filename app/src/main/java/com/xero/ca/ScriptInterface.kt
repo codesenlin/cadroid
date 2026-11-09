@@ -152,7 +152,7 @@ class ScriptInterface(manager: ScriptManager) {
 
     // ---------- QuickJS 侧载加速 worker（Rhino 主引擎调用，纯 JS 计算） ----------
 
-    /** worker 是否可用。 */
+    /** 壳侧统一判断 QuickJS worker 能力；JS 只读取这个结果。 */
     fun quickWorkerAvailable(): Boolean = com.xero.ca.script.engine.QuickJsWorker.isAvailable()
 
     /** 在 QuickJS worker 注册一个纯 JS 函数（source: "function name(args){...}"）。 */

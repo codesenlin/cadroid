@@ -1,5 +1,6 @@
 package com.xero.ca.script.engine
 
+import android.os.Build
 import android.util.Log
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.QuickJsException
@@ -51,15 +52,33 @@ object QuickJsWorker {
             "  return JSON.stringify(f.apply(null, args));" +
             "}"
 
-    /** worker 是否可用（库存在 + Android 6.0+，quickjs-kt 的 AAR minSdk 是 23）。 */
+    private val supportedAbis = setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+
+    @Volatile
+    private var availability: Boolean? = null
+
+    /**
+     * worker 是否可用：由壳统一判断一次，结果通过 ScriptInterface.quickWorkerAvailable() 给 JS。
+     *
+     * 条件：Android 6.0+、当前 ABI 在 quickjs-kt AAR 覆盖范围内、绑定类存在。
+     * 这里只做轻量探测；真正 new QuickJs 仍可能因 split/缺 so 失败，eval 会降级返回 null。
+     */
     fun isAvailable(): Boolean {
-        if (android.os.Build.VERSION.SDK_INT < 23) return false
-        return try {
-            Class.forName("com.dokar.quickjs.QuickJs")
-            true
-        } catch (t: Throwable) {
+        availability?.let { return it }
+        val result = if (Build.VERSION.SDK_INT < 23) {
             false
+        } else if (Build.SUPPORTED_ABIS.none { it in supportedAbis }) {
+            false
+        } else {
+            try {
+                Class.forName("com.dokar.quickjs.QuickJs")
+                true
+            } catch (t: Throwable) {
+                false
+            }
         }
+        availability = result
+        return result
     }
 
     private fun ensureStarted() {

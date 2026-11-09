@@ -27,7 +27,7 @@ buildscript {
         // AGP 的传递依赖里会声明旧版本；只在 resolutionStrategy.force 里抬版本，
         // GitHub 依赖图仍记录旧坐标。这里从 AGP 依赖树里 exclude 旧模块，再显式
         // 加回修复版本，SBOM/Dependabot 才不会继续报旧版本。
-        classpath("com.android.tools.build:gradle:9.5.0") {
+        classpath("com.android.tools.build:gradle:9.5.1") {
             exclude(group = "com.google.guava", module = "guava")
             exclude(group = "org.apache.commons", module = "commons-lang3")
             exclude(group = "org.bitbucket.b_c", module = "jose4j")

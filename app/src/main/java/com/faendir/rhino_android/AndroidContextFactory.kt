@@ -56,6 +56,15 @@ class AndroidContextFactory(private val cacheDirectory: File) : ContextFactory()
         return FileAndroidClassLoader(parent, cacheDirectory)
     }
 
+    override fun hasFeature(cx: Context, feature: Int): Boolean {
+        // Rhino 1.9 的 ThreadSafe*SlotMap 内部用 VarHandle/MethodHandle（API 26+）。
+        // 低版本关闭，避免走到 SlotMapOwner$ThreadedAccess。
+        if (feature == Context.FEATURE_THREAD_SAFE_OBJECTS) {
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+        }
+        return super.hasFeature(cx, feature)
+    }
+
     override fun onContextReleased(cx: Context) {
         super.onContextReleased(cx)
         (cx.applicationClassLoader as BaseAndroidClassLoader).reset()
