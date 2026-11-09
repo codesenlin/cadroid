@@ -6,7 +6,7 @@
 |----------------------------------|----------------------------------------------------------|---------------------------------|
 | `./gradlew :app:assembleRelease` | `app/build/outputs/apk/release/app-release-unsigned.apk` | 通用 APK（含全部 ABI）          |
 | `./gradlew :app:bundleRelease`   | `app/build/outputs/bundle/release/app-release.aab`       | App Bundle，供 Google Play 上架 |
-| `./tools/build-apks.sh`          | `build/dist/命令助手.apks`                               | 由 AAB 拆出的分体包             |
+| `./tools/build-apks.sh`（Windows：`.bat`） | `build/dist/命令助手.apks`                    | 由 AAB 拆出的分体包             |
 
 正式包仍由 CA 的 `cabuildtools shellBuildRelease` 产出（对 APK 签名 + 放进 `build/dist`）。
 
@@ -36,7 +36,7 @@
 - 没有按密度/语言拆分的资源（图片只有 8 张）
 - AAB 的 `base-master.apk` 本身仍是 3.75 MB
 
-所以**默认不产出 .apks**，只有需要上架 Google Play 时再跑 `tools/build-apks.sh`。
+所以**默认不产出 .apks**，只有需要上架 Google Play 时再跑 `tools/build-apks.sh`（Windows 用 `tools/build-apks.bat`）。
 
 ## bundletool
 
@@ -93,6 +93,11 @@ java -jar tools/bundletool.jar install-apks --apks=build/dist/命令助手.apks
 - 所以调试包也必须走 R8 的 dex 流程，否则 `assembleDebug` 直接
   `Error while dexing`
 
+Rhino 的 `ThreadSafe*SlotMap` 依赖 API 26+ 的 `VarHandle`/`MethodHandle`。运行期由
+`AndroidContextFactory.hasFeature` 按 `Build.VERSION.SDK_INT >= O` 决定是否启用
+`FEATURE_THREAD_SAFE_OBJECTS`，低版本保持关闭。R8 的 MethodHandle 警告是静态链接提示，
+不代表低版本会执行到该路径。
+
 这个模式用开关控制（`app/build.gradle.kts` 的 `rhinoCompat`）：
 
 ```properties
@@ -106,7 +111,7 @@ ca.rhinoCompat=true     # 默认：调试包也走 R8
 
 两个相关改动：
 
-1. AGP 9.5 会对 `debuggable + minifyEnabled` 发警告（提示优化/混淆会被关闭）。
+1. AGP 9.5.1 会对 `debuggable + minifyEnabled` 发警告（提示优化/混淆会被关闭）。
    我们本来就不需要优化/混淆、只需要 R8 dexing，所以在
    `gradle.properties` 里用 `android.sync.suppressAgpWarnings=DEBUGGABLE_AND_MINIFIED_ENABLED` 关掉。
 2. 目前 **Rhino 仍是脚本主引擎**（`QuickJsEngine` 那套实验实现已在 E2.15 移除），

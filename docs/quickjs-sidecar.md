@@ -109,12 +109,15 @@ QuickJS-Worker 线程（独占一个 QuickJS context，任务队列串行）
 返回 JSON 结果（Rhino 侧 JSON.parse 后继续处理 UI）
 ```
 
-- 代码：`script/engine/QuickJsWorker.kt`（Kotlin，~140 行）+ CA 仓库
-  `modules/utils/QuickAccel.js`（脚本侧桥接）
+- 代码：`app/src/main/java/com/xero/ca/script/engine/QuickJsWorker.kt`（Kotlin）+ CA 仓库
+  `src/core/QuickAccel.kt`（脚本侧桥接）
 - 线程模型：worker 线程独占 QuickJS context（单线程 → 任务队列串行）；调用方
   同步等结果（Rhino 脚本线程本来就在后台，不会 ANR）
 - 大块数据只同步一次：`quickWorkerSetVar("__commandSnap", json)`，之后每次只传前缀
-- 失败自动降级：库缺失 / API < 23 / 执行异常 → 回退原 JS 实现，功能不受影响
+- 壳侧统一判断：API ≥ 23、ABI 在 `arm64-v8a` / `armeabi-v7a` / `x86` / `x86_64`
+  内、绑定类存在，才把 `quickWorkerAvailable()` 的 true 结果交给 JS
+- 失败自动降级：API < 23 / 不支持的 ABI / 库缺失 / `.so` 加载失败 / 执行异常
+  → JS 侧 `QuickAccel.available=false` 或返回 null，回退纯 JS 实现；Rhino 主引擎不受影响
 - 只暴露 4 个 API：`quickWorkerRegister / quickWorkerCall / quickWorkerSetVar / quickWorkerEval`
 
 ### 适合 / 不适合侧载的场景
@@ -185,4 +188,4 @@ QuickJS-Worker 线程（独占一个 QuickJS context，任务队列串行）
 - 桥/引擎性能数据：同上 E2.4-E2.9、E2.11、E2.13
 - 16KB 对齐排查与选型：同上 E2.15-E2.16、`docs/apk-build.md`
 - 引擎/Java 加速选型：CA 仓库 `docs/data-and-accel.md`
-- 当前实现：`script/engine/QuickJsWorker.kt`、`modules/utils/QuickAccel.js`
+- 当前实现：`app/src/main/java/com/xero/ca/script/engine/QuickJsWorker.kt`、CA `src/core/QuickAccel.kt`

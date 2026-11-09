@@ -24,7 +24,7 @@
 
 ### 1. 先决条件：准备核心脚本
 
-本仓库只是壳子，核心逻辑是 JS，写在 [CA](https://github.com/codesenlin/CA) 里。构建前先确认
+本仓库只是壳子，核心逻辑用 Kotlin/JS 编写并打包成 JS，源码在 [CA](https://github.com/codesenlin/CA)。构建前先确认
 `app/src/main/assets/script.js` 存在——推荐直接用 CA 的构建工具生成（它会把下面这套活全干完）：
 
 ```bash
@@ -33,7 +33,7 @@ node ./cabuildtools/main.js shellPrepareDebug     # 调试用：组装核心 →
 node ./cabuildtools/main.js shellBuildRelease     # 正式包：额外做 dex 校验、zipalign、apksigner、导出
 ```
 
-- 构建工具读 CA 的 `config/shell.local.txt`（首次运行自动从模板生成，填自己机器上的路径）
+- 构建工具读 CA 的 `config/shell.json`，SDK / JDK / cadroid 路径会自动探测，无需手填 local 文件
 - 正式包会导出到 `CA/build/dist/命令助手(x.y.z).apk`；日常调试也可以直接 `./gradlew :app:assembleDebug`
   （用 `assets/` 里已有的 `script.js`）
 

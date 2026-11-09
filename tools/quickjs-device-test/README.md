@@ -13,6 +13,17 @@ tools/quickjs-device-test/run.sh
 WAIT_SECONDS=30 LINES=120 tools/quickjs-device-test/run.sh
 ```
 
+Windows：
+
+```bat
+tools\quickjs-device-test\run.bat
+
+rem 想等久一点 / 打更多日志
+set WAIT_SECONDS=30
+set LINES=120
+tools\quickjs-device-test\run.bat
+```
+
 ## 判断标准
 
 | 日志 | 含义 |
@@ -22,8 +33,8 @@ WAIT_SECONDS=30 LINES=120 tools/quickjs-device-test/run.sh
 | `Script: QuickAccel: 命令库同步到 worker ... ok=true` | 首次用到联想匹配时命令库同步成功 |
 | `E CA` / `FATAL EXCEPTION` / `ANR in com.xero.ca` | 有问题，看对应堆栈 |
 
-worker 不是必须的：库缺失或 API < 23 时启动日志会少一行 worker 可用，
-脚本会自动走原 JS 实现，功能不受影响。
+worker 不是必须的：API < 23、ABI 不在 arm64/armeabi/x86/x86_64、库缺失或 `.so` 加载失败时，
+壳侧 `quickWorkerAvailable()` 会返回 false（或首次调用失败），脚本自动走原 JS 实现，功能不受影响。
 
 ## 检查 16KB page 对齐（Android 15+ 设备要求）
 

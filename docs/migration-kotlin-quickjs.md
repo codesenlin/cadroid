@@ -11,6 +11,9 @@
 > 完整的"为什么不做主引擎 + 前后性能对比 + 给后来者的验证清单"整理在
 > **[docs/quickjs-sidecar.md](quickjs-sidecar.md)**，迁移细节再往下看。
 >
+> **当前代码位置**：`QuickJsWorker` 在 `app/src/main/java/com/xero/ca/script/engine/`，
+> CA 侧 `QuickAccel` 在 `src/core/QuickAccel.kt`。
+>
 > **阅读提示**：下面的 E0-E2.14 章节是探索过程的历史记录，其中出现的
 > `BuildConfig.JS_ENGINE` / `-Pca.jsEngine` / `QuickJsEngine` / `QuickJsBridgeHost` /
 > `quickjs-prelude.js` / `JsEngines` 选择器 / `ScriptHealth` / taoweiji 绑定等，
@@ -79,7 +82,7 @@ javap -p -classpath app/build/tmp/kotlin-classes/debug <被 JS 反射的类>
 | `instanceof java.lang.CharSequence` / `java.io.File` / `G.WebView` … | 数十处 |
 | `getClass()`                                                         | 2      |
 
-分布在 13 个脚本文件里（`CA/modules/*.js`、`CA/main.js`）。
+分布在 13 个脚本文件里（迁移前的 `CA/modules/*.js`、`CA/main.js`；当前对应 `CA/src/`）。
 
 壳子这边依赖 12 个 Rhino 类：
 
