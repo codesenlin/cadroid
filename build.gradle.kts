@@ -5,17 +5,11 @@ buildscript {
     // 没有可配置项，只能强制覆盖编译器版本。失败就删掉这段。
     configurations.named("classpath") {
         resolutionStrategy {
-            force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
-            force("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.21")
+            force("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
+            force("org.jetbrains.kotlin:kotlin-compiler-embeddable:${libs.versions.kotlin.get()}")
 
-            // Dependabot 告警的 buildscript 传递依赖：这些不进 APK，但构建期会加载；
-            // 统一抬到已修复版本，避免 AGP 自带旧版本再次被扫描出来。
-            force("com.google.guava:guava:33.7.2-jre")            // GHSA-xxph-c9ww-hj94
-            force("org.apache.commons:commons-lang3:3.18.0")     // GHSA-j288-q9x7-2f5v
-            force("org.bitbucket.b_c:jose4j:0.9.6")              // GHSA-3677-xxcr-wjqv
-            force("org.bouncycastle:bcpkix-jdk18on:1.85")        // GHSA-wg6q-6289-32hp
-            force("org.bouncycastle:bcprov-jdk18on:1.85")        // GHSA-9pwp / c3fc / qp49
-            force("org.jdom:jdom2:2.0.6.1")                      // GHSA-2363-cqg2-863c
+            // CVE 依赖不再 force：下面 AGP/Kotlin classpath 先 exclude 旧模块，
+            // 再由显式 classpath 统一补一份修复版本，避免同一坐标出现多份声明。
         }
     }
 
@@ -27,7 +21,7 @@ buildscript {
         // AGP 的传递依赖里会声明旧版本；只在 resolutionStrategy.force 里抬版本，
         // GitHub 依赖图仍记录旧坐标。这里从 AGP 依赖树里 exclude 旧模块，再显式
         // 加回修复版本，SBOM/Dependabot 才不会继续报旧版本。
-        classpath("com.android.tools.build:gradle:9.5.1") {
+        classpath(libs.android.gradle.plugin) {
             exclude(group = "com.google.guava", module = "guava")
             exclude(group = "org.apache.commons", module = "commons-lang3")
             exclude(group = "org.bitbucket.b_c", module = "jose4j")
@@ -39,7 +33,7 @@ buildscript {
 
         // Kotlin 编译器也会把 guava/commons/BC 等带进 buildscript 依赖图，
         // 单独再排一次旧模块，避免 GitHub 依赖图从 Kotlin 路径继续记录旧坐标。
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21") {
+        classpath(libs.kotlin.gradle.plugin) {
             exclude(group = "com.google.guava", module = "guava")
             exclude(group = "org.apache.commons", module = "commons-lang3")
             exclude(group = "org.bouncycastle", module = "bcpkix-jdk18on")
@@ -47,13 +41,11 @@ buildscript {
             exclude(group = "org.bouncycastle", module = "bcutil-jdk18on")
         }
         // 被上面 exclude 的模块：显式补上修复版本
-        classpath("com.google.guava:guava:33.7.2-jre")
-        classpath("org.apache.commons:commons-lang3:3.18.0")
-        classpath("org.bitbucket.b_c:jose4j:0.9.6")
-        classpath("org.bouncycastle:bcpkix-jdk18on:1.85")
-        classpath("org.bouncycastle:bcprov-jdk18on:1.85")
-        classpath("org.bouncycastle:bcutil-jdk18on:1.85")
-        classpath("org.jdom:jdom2:2.0.6.1")
+        classpath(libs.guava)
+        classpath(libs.commons.lang3)
+        classpath(libs.jose4j)
+        classpath(libs.bcpkix.jdk18on)
+        classpath(libs.jdom2)
     }
 }
 
