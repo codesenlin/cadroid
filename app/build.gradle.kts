@@ -1,4 +1,6 @@
-import org.gradle.api.tasks.util.PatternFilterable
+import groovy.json.JsonSlurper
+import org.gradle.api.GradleException
+import java.io.File
 
 plugins {
     id("com.android.application")
@@ -102,17 +104,14 @@ android {
             //   src/stub/gdt          广告/转化 SDK 缺失时（两个一起缺席）
             if (!tdAvailable) {
                 java.directories.add("src/stub/talkingdata")
+                kotlin.directories.add("src/stub/talkingdata")
             }
             if (!gdtAvailable) {
                 java.directories.add("src/stub/gdt")
+                kotlin.directories.add("src/stub/gdt")
             }
-            // 三份配置文件只当数据源，由 secret-config.gradle.kts 合并生成 com/xero/ca/gen/Secret.java
-            // 新 DSL 的 directories 只支持目录，旧 exclude/filter 仍由内部实现提供
-            val mainJava = java
-            if (mainJava is PatternFilterable) {
-                mainJava.exclude("com/xero/ca/config/**")
-            }
-            java.directories.add(layout.buildDirectory.dir("generated/source/secret").get().asFile.path)
+            // 三份配置只当数据源，由 app/build.gradle.kts 合并生成 com/xero/ca/gen/Secret.kt
+            kotlin.directories.add(layout.buildDirectory.dir("generated/source/secret").get().asFile.path)
         }
     }
     buildFeatures {
@@ -127,7 +126,7 @@ android {
 
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     // 本地依赖不入库（见 app/libs/.gitignore）；缺失时用 src/stub 下的空实现编译（见 sourceSets）
     if (tdAvailable) {
@@ -137,7 +136,7 @@ dependencies {
     if (gdtAvailable) {
         // 广告 SDK 与转化 SDK 配套：有 aar 就两个都加载，没有就两个都不加载
         implementation(files("libs/GDTActionSDK.min.1.9.8.aar"))
-        implementation("com.qq.e.union:union:4.712.1582")
+        implementation(libs.gdt.union)
     }
 
     // 命令助手高性能加速库（源码在 CA 仓库的 caaccel/，用 caaccel/build.sh 构建）
@@ -147,27 +146,144 @@ dependencies {
     }
 
 
-    implementation("androidx.annotation:annotation:1.11.0")
+    implementation(libs.androidx.annotation)
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
-    implementation("androidx.core:core-ktx:1.17.0")
+    implementation(libs.androidx.core.ktx)
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
-    implementation("com.jakewharton.android.repackaged:dalvik-dx:16.0.1")
-    implementation("net.lingala.zip4j:zip4j:2.11.6")
-    implementation("org.java-websocket:Java-WebSocket:1.6.0")
+    implementation(libs.dalvik.dx)
+    implementation(libs.zip4j)
+    implementation(libs.java.websocket)
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
-    implementation("org.mozilla:rhino:1.9.2")
-    implementation("org.mozilla:rhino-engine:1.9.2")
-    implementation("org.mozilla:rhino-kotlin:1.9.2")
+    implementation(libs.rhino)
+    implementation(libs.rhino.engine)
+    implementation(libs.rhino.kotlin)
     // E4X（XML 字面量）支持：1.8 起从核心拆成独立模块，老脚本可能用到
-    implementation("org.mozilla:rhino-xml:1.9.2")
+    implementation(libs.rhino.xml)
     // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
-    implementation("io.github.dokar3:quickjs-kt-android:1.0.15")
+    implementation(libs.quickjs.kt.android)
 }
 
-// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 secret-config.gradle.kts
-apply(from = "secret-config.gradle.kts")
+// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 app/build.gradle.kts
 tasks.named("preBuild") {
     dependsOn("generateSecret")
+}
+
+// ===== Secret 配置合并（原 secret-config 逻辑） =====
+// 密钥/账号配置的逐条合并逻辑（由 app/build.gradle.kts 通过 apply(from = ...) 引入）。
+//
+// 三份候选 JSON（都在 app/secrets/ 下）：
+//   1. local.json      本机私人配置（.gitignore 忽略，可选）
+//   2. standard.json   默认配置（原作者公开的那份值）
+//   3. template.json   模板（全空，兜底）
+//
+// 合并规则是「逐条」而不是整份：
+//   对每一个 getXxx()，按 私人 -> 默认 -> 模板 的顺序找第一个「非空」的值；
+//   某一条在私人文件里是空的，就单独回退到默认的对应值，不影响其它条目；
+//   三条都空就用空字符串（= 该功能关闭）。
+//
+// 生成结果：build/generated/source/secret/com/xero/ca/gen/Secret.kt
+// （放在 gen 包下，避免和私人文件名 com/xero/ca/Secret 抢同一个类名）
+
+
+val secretFields = linkedMapOf(
+    "getVerifyKey" to "byte[]",
+    "getLegacyVerifyKey" to "byte[]",
+    "getTDToken" to "String",
+    "getGDTAppID" to "String",
+    "getGDTPosID" to "String",
+    "getGiteeClientId" to "String",
+    "getGiteeClientSecret" to "String",
+    "getGiteeFeedbackToken" to "String",
+)
+
+val byteFields = setOf("getVerifyKey", "getLegacyVerifyKey")
+
+val secretStages = listOf(
+    "local（本机）" to file("secrets/local.json"),
+    "standard（默认）" to file("secrets/standard.json"),
+    "template（模板）" to file("secrets/template.json"),
+)
+
+fun parseSecretJson(f: File): Map<String, String> {
+    if (f.length() == 0L) return secretFields.keys.associateWith { "" }
+    val root = try {
+        JsonSlurper().parse(f)
+    } catch (e: Exception) {
+        throw GradleException("解析不了 $f：${e.message}")
+    } as? Map<*, *> ?: throw GradleException("$f 必须是 JSON 对象")
+
+    val values = linkedMapOf<String, String>()
+    for ((name, _) in secretFields) {
+        val raw = root[name] ?: ""
+        if (raw !is String) throw GradleException("$f 的 $name 必须是字符串")
+        values[name] = raw
+    }
+    return values
+}
+
+fun escapeKotlinString(value: String): String =
+    value.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+
+val secretMerged = linkedMapOf<String, String>()
+val secretPickedFrom = mutableMapOf<String, String>()
+for ((stageName, stageFile) in secretStages) {
+    if (!stageFile.exists()) continue
+    val parsed = parseSecretJson(stageFile)
+    for ((name, value) in parsed) {
+        if (secretMerged[name].isNullOrEmpty() && value.isNotEmpty()) {
+            secretMerged[name] = value
+            secretPickedFrom[name] = stageName
+        } else if (!secretMerged.containsKey(name)) {
+            secretMerged[name] = ""
+        }
+    }
+}
+for ((name, _) in secretFields) {
+    if (!secretMerged.containsKey(name)) secretMerged[name] = ""
+}
+if (secretMerged["getVerifyKey"].isNullOrEmpty()) {
+    throw GradleException("三份配置里都没有非空的 getVerifyKey，至少 template.json 必须有")
+}
+
+val secretGenFile = layout.buildDirectory.file("generated/source/secret/com/xero/ca/gen/Secret.kt")
+
+tasks.register("generateSecret") {
+    val stages = secretStages.map { it.second }.filter { it.exists() }
+    inputs.files(stages)
+    outputs.file(secretGenFile)
+    doLast {
+        val out = secretGenFile.get().asFile
+        out.parentFile.mkdirs()
+        val sb = StringBuilder()
+        sb.append("package com.xero.ca.gen\n\n")
+        sb.append("import android.util.Base64\n\n")
+        sb.append("/**\n")
+        sb.append(" * 由 app/build.gradle.kts 在构建时生成，不要手改。\n")
+        sb.append(" * 逐条合并 local（本机） > standard（默认） > template（模板），空条目自动回退。\n")
+        sb.append(" */\n")
+        sb.append("object Secret {\n")
+        for ((name, type) in secretFields) {
+            val from = secretPickedFrom[name] ?: "template（模板，空实现）"
+            val value = escapeKotlinString(secretMerged[name] ?: "")
+            sb.append("    // $name 来自 $from\n")
+            if (type == "byte[]") {
+                sb.append("    @JvmStatic\n")
+                sb.append("    fun $name(): ByteArray = Base64.decode(\"$value\", Base64.DEFAULT)\n\n")
+            } else {
+                sb.append("    @JvmStatic\n")
+                sb.append("    fun $name(): String = \"$value\"\n\n")
+            }
+        }
+        val text = sb.toString().trimEnd('\n') + "\n}\n"
+        out.writeText(text)
+        logger.lifecycle("Secret 配置（逐条合并）:")
+        secretFields.keys.sorted().forEach { name ->
+            val from = secretPickedFrom[name] ?: "template（空）"
+            val shown = if (secretMerged[name].isNullOrEmpty()) "（空）" else "（已配置）"
+            logger.lifecycle("  $name: $from $shown")
+        }
+        logger.lifecycle("  生成: $out")
+    }
 }

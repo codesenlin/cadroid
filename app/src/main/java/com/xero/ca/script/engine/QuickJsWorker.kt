@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
  *  - 所以把纯计算/算法型热路径 offload 到 worker，Rhino 线程同步等结果
  *    （脚本线程本来就在后台，阻塞它不会 ANR）
  *
- * 引擎绑定：io.github.dokar3:quickjs-kt-android:1.0.15（Apache-2.0，
+ * 引擎绑定：io.github.dokar3:quickjs-kt-android:1.0.18（Apache-2.0，
  * .so 已 16KB page 对齐，替代此前自编译的极端版；worker 只需要 evaluate）。
  *
  * 线程模型：worker 线程独占一个 QuickJs 实例，所有调用排队串行执行；
@@ -65,17 +65,11 @@ object QuickJsWorker {
      */
     fun isAvailable(): Boolean {
         availability?.let { return it }
-        val result = if (Build.VERSION.SDK_INT < 23) {
+        val result = Build.VERSION.SDK_INT >= 23 && !Build.SUPPORTED_ABIS.none { it in supportedAbis } && try {
+            Class.forName("com.dokar.quickjs.QuickJs")
+            true
+        } catch (t: Throwable) {
             false
-        } else if (Build.SUPPORTED_ABIS.none { it in supportedAbis }) {
-            false
-        } else {
-            try {
-                Class.forName("com.dokar.quickjs.QuickJs")
-                true
-            } catch (t: Throwable) {
-                false
-            }
         }
         availability = result
         return result

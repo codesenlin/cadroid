@@ -29,11 +29,11 @@ class BugReportActivity : Activity() {
             }
             .setNegativeButton("忽略") { _, _ -> finish() }
             .apply {
-                val epid = ex.getInt("pid", 0)
-                if (epid != 0) {
+                val pied = ex.getInt("pid", 0)
+                if (pied != 0) {
                     setNeutralButton("立即停止") { _, _ ->
                         finish()
-                        android.os.Process.killProcess(epid)
+                        android.os.Process.killProcess(pied)
                         exitProcess(0)
                     }
                 }

@@ -28,8 +28,8 @@ class RhinoEngine : JsEngine {
     /** Rhino 是纯 Java 实现，不依赖 .so，任何设备都可用。 */
     override fun enterContext(): JsContext {
         val cx = RhinoAndroidHelper().enterContext()
-        cx.setOptimizationLevel(-1)
-        cx.setLanguageVersion(Context.VERSION_ES6)
+        cx.optimizationLevel = -1
+        cx.languageVersion = Context.VERSION_ES6
         return JsContext(cx)
     }
 
@@ -119,7 +119,7 @@ class RhinoEngine : JsEngine {
         }
     }
 
-    override fun wrapAsScriptable(obj: Any?, scope: Any?): Any? =
+    override fun wrapAsScriptable(obj: Any?, scope: Any?): Any =
         NativeJavaObject(
             asScriptable(scope),
             obj,

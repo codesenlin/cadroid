@@ -6,17 +6,14 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import android.util.Log
-
 import com.qq.e.comm.managers.GDTAdSdk
 import com.tendcloud.tenddata.TalkingDataSDK
 import com.xero.ca.gen.Secret
-
 import java.io.FileOutputStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.SimpleDateFormat
 import java.util.Date
-import kotlin.system.exitProcess
 
 class XApplication : Application() {
     override fun onCreate() {
@@ -25,7 +22,7 @@ class XApplication : Application() {
         // 优量汇（GDT）广告 SDK：AppID 从 4.x 起只能通过这里传入，必须在请求广告前初始化。
         // GDT_ENABLED 为 false 表示构建时没装配优量汇（缺 GDTActionSDK aar），直接跳过。
         val gdtAppId = Secret.getGDTAppID()
-        if (BuildConfig.GDT_ENABLED && !gdtAppId.isNullOrEmpty()) {
+        if (BuildConfig.GDT_ENABLED && gdtAppId.isNotEmpty()) {
             if (!GdtSupport.isAbiSupported()) {
                 // GDT 的 libturingad.so 只覆盖 ARM；x86/x86_64/riscv64 等设备上
                 // 连初始化都不做，避免 SDK 内部尝试加载 so 后留下半初始化状态。

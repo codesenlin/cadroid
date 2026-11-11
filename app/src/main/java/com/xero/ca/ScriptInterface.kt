@@ -185,7 +185,7 @@ class ScriptInterface(manager: ScriptManager) {
             "globalThis.$safe = JSON.parse(\"$escaped\"); true"
         )
         if (result != "true") {
-            android.util.Log.w("Script", "quickWorkerSetVar 失败: " + safe + " len=" + json.length + " => " +
+            Log.w("Script", "quickWorkerSetVar 失败: " + safe + " len=" + json.length + " => " +
                 (result ?: "null").take(500))
         }
         return result == "true"

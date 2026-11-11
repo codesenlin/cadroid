@@ -96,7 +96,7 @@ class UnsafeFileProvider : ContentProvider() {
         private val mFiles: MutableSet<String> = Collections.synchronizedSet(HashSet())
 
         // 跟随 applicationId，与 Manifest 里的 ${applicationId} 保持一致
-        private val authority: String = BuildConfig.APPLICATION_ID + ".UnsafeFileProvider"
+        private const val authority: String = BuildConfig.APPLICATION_ID + ".UnsafeFileProvider"
 
         @JvmStatic
         fun getUriForFile(file: File): Uri {

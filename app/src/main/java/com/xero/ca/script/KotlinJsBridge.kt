@@ -66,14 +66,14 @@ class KotlinJsBridge(private val context: Context) {
         }
         if (target.isInstance(value)) return value
         return when (target) {
-            java.lang.Integer.TYPE, java.lang.Integer::class.java -> (value as? Number)?.toInt()
+            java.lang.Integer.TYPE, Integer::class.java -> (value as? Number)?.toInt()
             java.lang.Long.TYPE, java.lang.Long::class.java -> (value as? Number)?.toLong()
             java.lang.Short.TYPE, java.lang.Short::class.java -> (value as? Number)?.toShort()
             java.lang.Byte.TYPE, java.lang.Byte::class.java -> (value as? Number)?.toByte()
             java.lang.Double.TYPE, java.lang.Double::class.java -> (value as? Number)?.toDouble()
             java.lang.Float.TYPE, java.lang.Float::class.java -> (value as? Number)?.toFloat()
             java.lang.Boolean.TYPE, java.lang.Boolean::class.java -> value as? Boolean
-            java.lang.Character.TYPE, java.lang.Character::class.java -> (value as? String)?.firstOrNull()
+            java.lang.Character.TYPE, Character::class.java -> (value as? String)?.firstOrNull()
             String::class.java -> value.toString()
             else -> Unconvertible
         } ?: Unconvertible
