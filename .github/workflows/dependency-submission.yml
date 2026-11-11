@@ -31,4 +31,4 @@ jobs:
         with:
           packages: "platforms;android-37.0"
 
-      - uses: gradle/actions/dependency-submission@v4
+      - uses: gradle/actions/dependency-submission@v6
