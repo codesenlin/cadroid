@@ -30,7 +30,7 @@ jobs:
 
       - uses: android-actions/setup-android@v3
         with:
-          packages: "platforms;android-37"
+          packages: "platforms;android-37.0"
 
       - uses: github/codeql-action/init@v3
         with:
