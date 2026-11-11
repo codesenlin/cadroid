@@ -1,5 +1,7 @@
 # 命令助手 Android
 
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
+
 ## 简介
 
 命令助手 Android 是[命令助手](https://ca.projectxero.top/features.html)的 App 版本，在核心脚本之外
@@ -21,6 +23,15 @@
 | <https://github.com/XeroAlpha/cadroid> | 原作者的 Android 壳仓库（本仓库的上游）             |
 
 ## 构建
+
+依赖版本集中在：
+
+```text
+gradle/libs.versions.toml
+```
+
+AGP、Kotlin、AndroidX、Rhino、QuickJS 和 buildscript 的 CVE 修补版本都从这里读取；
+本地 `app/libs/` 里的 SDK 仍按文件是否存在决定是否启用。
 
 ### 1. 先决条件：准备核心脚本
 
@@ -92,25 +103,25 @@ foojay-resolver，缺了会自动下载（Android Studio 用的是它自带的 J
 账号信息推荐用模板快速配置：
 
 ```bash
-cp app/src/main/java/config/template/Secret.java \
-   app/src/main/java/config/local/Secret.java
+cp app/secrets/template.json app/secrets/local.json
 ```
 
-然后在 `config/local/Secret.java` 里按注释填写需要的条目——**每条都允许为空**，空条目会自动
+然后在 `app/secrets/local.json` 里填需要的字符串——**每条都允许为空**，空条目会自动
 回退，不影响其它条目。
 
-| 优先级 | 文件                          | 说明                                                                                            |
-|--------|-------------------------------|-------------------------------------------------------------------------------------------------|
-| 1      | `config/local/Secret.java`    | **本机私人配置**（`config/.gitignore` 已忽略，可选）                                            |
-| 2      | `config/standard/Secret.java` | **默认配置**：CA 原作者公开的那份值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth 凭据） |
-| 3      | `config/template/Secret.java` | **模板**：全部留空，兜底                                                                        |
+| 优先级 | 文件                        | 说明                                                                                            |
+|--------|-----------------------------|-------------------------------------------------------------------------------------------------|
+| 1      | `app/secrets/local.json`    | **本机私人配置**（已 gitignore，可选）                                                          |
+| 2      | `app/secrets/standard.json` | **默认配置**：CA 原作者公开的那份值（TalkingData token、优量汇 AppID/广告位、Gitee OAuth 凭据） |
+| 3      | `app/secrets/template.json` | **模板**：全部留空，兜底                                                                        |
 
 **合并是按条目（每个 getter）来的，不是整份文件**：例如只填了 TalkingData token、其余留空，
 那么广告 AppID / 广告位 / Gitee 那几项会各自回退到默认配置的值；某一条在默认里也是空，
 才落回模板的空实现（该功能关闭）。
 
-**实现**：`app/secret-config.gradle.kts` 在构建时解析这三份文件、逐条合并，生成
-`com/xero/ca/gen/Secret.java` 参与编译（`config/` 整棵目录只当数据源，不参与编译）。
+**实现**：`app/build.gradle.kts` 在构建时解析这三份 JSON、逐条合并，生成 Kotlin
+`com/xero/ca/gen/Secret.kt` 参与编译（`app/secrets/` 只当数据源，不参与编译）。
+JSON 的值统一是字符串，密钥/公钥也直接填 Base64。
 构建日志会列出每一项最终来自哪份：
 
 ```
@@ -130,8 +141,8 @@ Secret 配置（逐条合并）:
 
 ## 文档
 
-| 文档 | 说明 |
-|---|---|
-| [docs/quickjs-sidecar.md](docs/quickjs-sidecar.md) | **为什么 QuickJS 只做侧载**、前后性能对比、给后来者的验证清单 |
-| [docs/migration-kotlin-quickjs.md](docs/migration-kotlin-quickjs.md) | Kotlin 化 + JS 引擎迁移的完整过程记录（E0-E2.17） |
-| [docs/apk-build.md](docs/apk-build.md) | APK 构建、签名、AAB/16KB 等打包相关说明 |
+| 文档                                                                 | 说明                                                          |
+|----------------------------------------------------------------------|---------------------------------------------------------------|
+| [docs/quickjs-sidecar.md](docs/quickjs-sidecar.md)                   | **为什么 QuickJS 只做侧载**、前后性能对比、给后来者的验证清单 |
+| [docs/migration-kotlin-quickjs.md](docs/migration-kotlin-quickjs.md) | Kotlin 化 + JS 引擎迁移的完整过程记录（E0-E2.17）             |
+| [docs/apk-build.md](docs/apk-build.md)                               | APK 构建、签名、AAB/16KB 等打包相关说明                       |

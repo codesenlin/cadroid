@@ -2,11 +2,11 @@
 
 ## 当前产物形态
 
-| 命令                             | 产物                                                     | 用途                            |
-|----------------------------------|----------------------------------------------------------|---------------------------------|
-| `./gradlew :app:assembleRelease` | `app/build/outputs/apk/release/app-release-unsigned.apk` | 通用 APK（含全部 ABI）          |
-| `./gradlew :app:bundleRelease`   | `app/build/outputs/bundle/release/app-release.aab`       | App Bundle，供 Google Play 上架 |
-| `./tools/build-apks.sh`（Windows：`.bat`） | `build/dist/命令助手.apks`                    | 由 AAB 拆出的分体包             |
+| 命令                                       | 产物                                                     | 用途                            |
+|--------------------------------------------|----------------------------------------------------------|---------------------------------|
+| `./gradlew :app:assembleRelease`           | `app/build/outputs/apk/release/app-release-unsigned.apk` | 通用 APK（含全部 ABI）          |
+| `./gradlew :app:bundleRelease`             | `app/build/outputs/bundle/release/app-release.aab`       | App Bundle，供 Google Play 上架 |
+| `./tools/build-apks.sh`（Windows：`.bat`） | `build/dist/命令助手.apks`                               | 由 AAB 拆出的分体包             |
 
 正式包仍由 CA 的 `cabuildtools shellBuildRelease` 产出（对 APK 签名 + 放进 `build/dist`）。
 
@@ -18,7 +18,7 @@
 > 当前通用 release APK 实测 **6.10 MB**（未签名，含 GDT）。
 >
 > 另：`libquickjs.so` / `libturingad.so` 均为 **16KB page 对齐**（Android 15+ 16KB
-> 设备的要求），来源分别是 quickjs-kt 1.0.15 与优量汇 AAR。
+> 设备的要求），来源分别是 quickjs-kt 1.0.18 与优量汇 AAR。
 
 `bundletool get-size total --dimensions=ABI`：
 
@@ -125,8 +125,8 @@ arm64-v8a），没有 x86 / x86_64。所以它天然是"小众架构跑不了"�
 
 两种构建方式：
 
-| 命令                                                | APK         | 原生库                                                                | 架构覆盖                   |
-|-----------------------------------------------------|-------------|-----------------------------------------------------------------------|----------------------------|
+| 命令                                                | APK         | 原生库                                                 | 架构覆盖                   |
+|-----------------------------------------------------|-------------|--------------------------------------------------------|----------------------------|
 | `./gradlew :app:assembleRelease`                    | **6.10 MB** | `libquickjs.so`（全 4 种）+ `libturingad.so`（arm ×3） | arm 完整；x86 靠运行期降级 |
 | `./gradlew :app:assembleRelease -Pca.withGdt=false` | **3.39 MB** | 只有 `libquickjs.so`（全 4 种）                        | **全架构**                 |
 

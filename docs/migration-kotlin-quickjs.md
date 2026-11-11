@@ -6,7 +6,7 @@
 > **最终结论（E2.17 之后）**：**不换主引擎**。脚本继续跑 Rhino（反射/UI 密集逻辑最快），
 > QuickJS 只保留为**纯计算侧载 worker**（`QuickJsWorker` + 脚本侧 `QuickAccel`：
 > JSON 进/JSON 出、命令库只同步一次；命令联想匹配实测 162ms → ~16ms）。
-> 引擎依赖最终改用 `io.github.dokar3:quickjs-kt-android:1.0.15`（16KB page 对齐）。
+> 引擎依赖最终改用 `io.github.dokar3:quickjs-kt-android:1.0.18`（16KB page 对齐）。
 >
 > 完整的"为什么不做主引擎 + 前后性能对比 + 给后来者的验证清单"整理在
 > **[docs/quickjs-sidecar.md](quickjs-sidecar.md)**，迁移细节再往下看。
@@ -23,27 +23,26 @@
 
 ### 目标与边界
 
-44 个 Java 文件 / 4117 行，其中：
+迁移开始时 44 个 Java 文件 / 4117 行；现在 `app/src` 下已经没有 `.java`：
 
-| 处理          | 文件                                             | 原因                                                                                         |
-|---------------|--------------------------------------------------|----------------------------------------------------------------------------------------------|
-| **迁移**      | `app/src/main/java/com/**`（36 个）              | 应用逻辑                                                                                     |
-| **保留 Java** | `app/src/stub/**`（5 个）                        | GDT / TalkingData 的桩，必须与外部 SDK 的 ABI 逐字节一致，Kotlin 会加 `INSTANCE`、改方法签名 |
-| **保留 Java** | `config/{standard,template}/Secret.java`（2 个） | 构建时生成 `Secret` 类用的来源模板                                                           |
-| **保留 Java** | `javax/lang/model/SourceVersion.java`（1 个）    | 给 Rhino 用的 Java 8 API 桩                                                                  |
+| 处理             | 文件                       | 说明                                                                    |
+|------------------|----------------------------|-------------------------------------------------------------------------|
+| **迁移**         | `app/src/main/java/com/**` | 应用逻辑全部 Kotlin                                                     |
+| **已 Kotlin 化** | `app/src/stub/**`          | GDT / TalkingData 的桩改用 Kotlin，`@JvmStatic` / 接口签名保持 ABI 兼容 |
+| **配置数据**     | `app/secrets/*.json`       | Secret 模板改为 JSON，构建时生成 Kotlin `com/xero/ca/gen/Secret.kt`     |
+
+**结果：应用代码、SDK 桩和 Secret 配置源已全部 Kotlin 化；构建脚本保持 KTS。**
 
 ### 阶段
 
-| 阶段 | 内容                                                                                                       | 状态         |
-|------|------------------------------------------------------------------------------------------------------------|--------------|
-| P0   | 接入 Kotlin（2.0.21 / jvmTarget 17）+ 首批 5 个无反射风险文件                                              | ✅ `b102f0a` |
-| P1   | 12 个低风险文件（Activity/Service/Receiver/Preference/Provider）                                           | ✅ 3 个提交  |
-| P2   | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | ✅ 2 个提交  |
-| P3   | 4 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353 / AnalyticsPlatform 52）    | ✅ 3 个提交  |
-| P4   | 6 个类加载器（com/faendir/rhino_android/*）                                                                | ✅ 2 个提交  |
+| 阶段 | 内容                                                                                                       | 状态                                     |
+|------|------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| P0   | 接入 Kotlin（2.0.21 / jvmTarget 17）+ 首批 5 个无反射风险文件                                              | ✅ `b102f0a`                             |
+| P1   | 12 个低风险文件（Activity/Service/Receiver/Preference/Provider）                                           | ✅ 3 个提交                              |
+| P2   | 6 个中风险（AdProvider / MCAdapter / XApplication / ScriptService / ScriptTileService / RhinoFrameLayout） | ✅ 2 个提交                              |
+| P3   | 4 个 JS 桥接面（ScriptInterface 422 / ScriptManager 329 / ScriptFileStream 353 / AnalyticsPlatform 52）    | ✅ 3 个提交                              |
+| P4   | 6 个类加载器（com/faendir/rhino_android/*）                                                                | ✅ 2 个提交                              |
 | P5   | 同步到 CA_Reforged/cadroid 并推送                                                                          | ✅ 已并入 subtree 方案（见下方进度更新） |
-
-**结果：36 个应用代码文件全部 Kotlin 化，8 个 Java 刻意保留（stub 5 + config 模板 2 + javax 1）。**
 
 ### 迁移中踩到的语义差（都已修正）
 
@@ -151,9 +150,9 @@ git subtree pull --prefix=cadroid https://github.com/codesenlin/cadroid.git main
 
 新增 `app/src/main/java/com/xero/ca/script/engine/`：
 
-| 文件 | 内容 |
-|------|------|
-| `JsEngine.kt` | 引擎无关的抽象：`JsContext` / `JsScope` / `JsScript` 句柄 + `JsEngine` 接口（enterContext / initScope / compile / execute / callFunction / wrapAsScriptable / iCode 缓存） |
+| 文件             | 内容                                                                                                                                                                                               |
+|------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `JsEngine.kt`    | 引擎无关的抽象：`JsContext` / `JsScope` / `JsScript` 句柄 + `JsEngine` 接口（enterContext / initScope / compile / execute / callFunction / wrapAsScriptable / iCode 缓存）                         |
 | `RhinoEngine.kt` | `JsEngine` 的 Rhino 实现：把原来散在 `ScriptManager`、`ScriptInterface` 里的 Rhino 细节（Context 参数、WrapFactory、Kit/缓存序列化、NativeJavaObject 包装、StackStyle / emptyArgs 补丁）全部收进来 |
 
 `ScriptManager` 和 `ScriptInterface` **已经不再 import 任何 `org.mozilla.*`**，
@@ -171,14 +170,14 @@ git subtree pull --prefix=cadroid https://github.com/codesenlin/cadroid.git main
 绑定选型：**[app.cash.quickjs:quickjs-android:0.9.2](https://repo1.maven.org/maven2/app/cash/quickjs/quickjs-android/0.9.2/)**
 （Maven Central，Apache-2.0，AAR 里自带四种 so：arm64-v8a / armeabi-v7a / x86 / x86_64）
 
-| 项 | 状态 |
-|----|------|
-| `QuickJsEngine`（create / close / compile / execute） | ✅ |
-| 字节码磁盘缓存（`script.obj` 换成 qjsc bytecode） | ✅ |
-| 启用开关 `-Pca.jsEngine=quickjs` → `BuildConfig.JS_ENGINE` | ✅ |
-| `java` / `android` / `Packages` 命名空间 | ❌ E2 |
-| `ScriptInterface` 注入（`initScope`） | ❌ E2 |
-| `callFunction` / `wrapAsScriptable`（Java ↔ JS 双向调用） | ❌ E2 |
+| 项                                                         | 状态  |
+|------------------------------------------------------------|-------|
+| `QuickJsEngine`（create / close / compile / execute）      | ✅    |
+| 字节码磁盘缓存（`script.obj` 换成 qjsc bytecode）          | ✅    |
+| 启用开关 `-Pca.jsEngine=quickjs` → `BuildConfig.JS_ENGINE` | ✅    |
+| `java` / `android` / `Packages` 命名空间                   | ❌ E2 |
+| `ScriptInterface` 注入（`initScope`）                      | ❌ E2 |
+| `callFunction` / `wrapAsScriptable`（Java ↔ JS 双向调用）  | ❌ E2 |
 
 **默认仍是 Rhino**（`BuildConfig.JS_ENGINE = "rhino"`），行为完全不变。
 带 QuickJS 依赖后 APK 约 +3.2 MB（四个 ABI 的 libquickjs.so）；
@@ -204,12 +203,12 @@ JS (prelude)  ── __caBridge.call(requestJson) ──▶  QuickJsBridgeHost�
 
 新增文件：
 
-| 文件 | 作用 |
-|------|------|
-| `script/engine/quickjs/QuickJsBridge.kt` | 桥接口（`call(String): String`） |
-| `script/engine/quickjs/QuickJsBridgeHost.kt` | 反射实现：类/字段/方法/构造/数组/instanceof，参数重载评分 + varargs |
-| `app/src/main/resources/quickjs-prelude.js` | JS 侧：`java`/`android`/`Packages`、Class/对象 Proxy 包装、`ScriptInterface` 注入、`__caCallHook` |
-| `tools/quickjs-bridge-smoke/` | 桌面 JVM 冒烟测试（用 quickjs-jvm 跑，不依赖设备） |
+| 文件                                         | 作用                                                                                              |
+|----------------------------------------------|---------------------------------------------------------------------------------------------------|
+| `script/engine/quickjs/QuickJsBridge.kt`     | 桥接口（`call(String): String`）                                                                  |
+| `script/engine/quickjs/QuickJsBridgeHost.kt` | 反射实现：类/字段/方法/构造/数组/instanceof，参数重载评分 + varargs                               |
+| `app/src/main/resources/quickjs-prelude.js`  | JS 侧：`java`/`android`/`Packages`、Class/对象 Proxy 包装、`ScriptInterface` 注入、`__caCallHook` |
+| `tools/quickjs-bridge-smoke/`                | 桌面 JVM 冒烟测试（用 quickjs-jvm 跑，不依赖设备）                                                |
 
 已支持：静态/实例字段与方法、构造、`.class`、`Class.forName` /
 `getDeclaredMethod` + `invoke`（含 varargs）、数组、`instanceof`、
@@ -224,12 +223,12 @@ Java 异常消息、Java 侧调 JS 全局函数（`callFunction`）。
 
 在 x86_64 Android 模拟器（API 37）上装 `-Pca.jsEngine=quickjs` 的 debug 包，循环验证：
 
-| 现象 | 原因 / 修复 |
-|------|-------------|
-| QuickJS 选中、prelude 加载失败 `not a function` | debug 包 R8 混淆了 `QuickJsBridge` 接口方法名 → 加 keep 规则 |
-| `android.os.Handler.<init>` 选了 `Handler(Callback)` 重载 | 参数打分没检查 handle 的实际类型 → 按 `isInstance` 给分 |
-| 脚本里 `if (module.onCreate)` 误判为存在 | 桥对所有属性都返回函数；改成 host 区分「字段 / 方法 / 不存在」，不存在返回 undefined |
-| `new java.lang.Runnable({...})` → `不能把 JS 对象传给 Java` | **当前绑定的硬限制**：app.cash.quickjs 没有 Java→JS 同步调用，做不了接口适配器 |
+| 现象                                                        | 原因 / 修复                                                                          |
+|-------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| QuickJS 选中、prelude 加载失败 `not a function`             | debug 包 R8 混淆了 `QuickJsBridge` 接口方法名 → 加 keep 规则                         |
+| `android.os.Handler.<init>` 选了 `Handler(Callback)` 重载   | 参数打分没检查 handle 的实际类型 → 按 `isInstance` 给分                              |
+| 脚本里 `if (module.onCreate)` 误判为存在                    | 桥对所有属性都返回函数；改成 host 区分「字段 / 方法 / 不存在」，不存在返回 undefined |
+| `new java.lang.Runnable({...})` → `不能把 JS 对象传给 Java` | **当前绑定的硬限制**：app.cash.quickjs 没有 Java→JS 同步调用，做不了接口适配器       |
 
 进度：QuickJS 已能在模拟器上加载 prelude、编译整份脚本（约 6.3s，模拟器软件渲染下）、
 执行到模块加载阶段；**下一个大坑是 `new java.lang.Runnable({...})` 这种"用 JS 对象实现 Java 接口"**，
@@ -263,11 +262,11 @@ Java 异常消息、Java 侧调 JS 全局函数（`callFunction`）。
 ### E2.16：改用 quickjs-kt（16KB、社区维护）替代自编译版（2026-10-31 下午）
 
 E2.15 自编译的极简 JNI 已验证可用（40x），但社区里后来发现
-`io.github.dokar3:quickjs-kt-android:1.0.15`（2026-09 发布）的 `.so`
+`io.github.dokar3:quickjs-kt-android:1.0.18`（2026-09 发布）的 `.so`
 **已经是 16KB 对齐**（早先查的 1.0.0-alpha13 还是 4KB，Maven 搜索接口的
 latestVersion 是过期的）。最终改用社区维护库：
 
-- 依赖：`io.github.dokar3:quickjs-kt-android:1.0.15`（Apache-2.0，四 ABI，
+- 依赖：`io.github.dokar3:quickjs-kt-android:1.0.18`（Apache-2.0，四 ABI，
   LOAD align=0x4000）
 - `QuickJsWorker` 改为 quickjs-kt API：`QuickJs.create(Dispatchers.Default)` +
   `runBlocking { evaluate<Any?>(code) }`，结果统一 `toString()` 回传
@@ -287,12 +286,12 @@ latestVersion 是过期的）。最终改用社区维护库：
 Android 15+ 的 16KB page size 设备要求 native 库 ELF LOAD 段 16KB 对齐，
 否则 .so 加载失败、Play 也会拒包。排查了常见 QuickJS Android 库：
 
-| 库 | .so LOAD 对齐 |
-|---|---|
-| io.github.taoweiji:quickjs-android:1.4.6（原用） | 0x1000（4KB）✗ |
-| app.cash.quickjs:0.9.2 | 0x1000 ✗ |
-| com.github.penfeizhou:quickjs4a:0.0.3 | 0x1000 ✗ |
-| io.github.dokar3:quickjs-kt-android:1.0.0-alpha13 | 0x1000 ✗ |
+| 库                                                | .so LOAD 对齐   |
+|---------------------------------------------------|-----------------|
+| io.github.taoweiji:quickjs-android:1.4.6（原用）  | 0x1000（4KB）✗ |
+| app.cash.quickjs:0.9.2                            | 0x1000 ✗       |
+| com.github.penfeizhou:quickjs4a:0.0.3             | 0x1000 ✗       |
+| io.github.dokar3:quickjs-kt-android:1.0.0-alpha13 | 0x1000 ✗       |
 
 **结论：没有现成的 16KB QuickJS AAR。** 既然侧载 worker 只需要
 "给一段 JS、拿回字符串"，直接自编译一个极简绑定：
@@ -541,17 +540,17 @@ QuickJS 路径能跑过协议、模块初始化，进入 **MainView 视图构建
 
 继续在模拟器上推进，真实脚本现在能跑完大部分模块初始化，补上的兼容点：
 
-| 问题 | 修复 |
-|------|------|
-| `Packages["[B"]` / `Packages.java.lang.String` | `Packages` 改成 Proxy，支持类名/数组描述符直接取类 |
-| `Packages.x.Y(...)` 不写 new（DexPlugin） | 类代理补 `apply` 陷阱 |
-| `new org.mozilla.javascript.Scriptable({...})` 当动态命名空间（L.js） | prelude 里直接用 JS Proxy 模拟，属性访问走 `get`/`put`/`has` |
-| Java 里访问 `obj.STATIC_FIELD` / `obj.staticMethod()`（`ctx.STORAGE_SERVICE`） | 实例 get/call 回退静态成员 |
-| Java Long/Integer 参与 `String()`/比较（DBSettings） | JavaObject 实现 `Symbol.toPrimitive` |
-| 数字/布尔/数组传给 String 参数 | 按 Rhino 规则转成字符串 |
-| JS 对象传给接口参数（`createFrameLayout({...})`） | 自动生成对象适配器（按方法名取 JS 函数） |
-| `Class.getMethod` 按实例 vs 静态调用 | 桥区分 `c`（静态）/`h`（实例），Class 对象也能调实例方法 |
-| `Threads.await*` 阻塞等 Future（JS 线程被占） | CA 的 Threads.js 加 QuickJS 分支：同步等待直接内联执行 |
+| 问题                                                                           | 修复                                                         |
+|--------------------------------------------------------------------------------|--------------------------------------------------------------|
+| `Packages["[B"]` / `Packages.java.lang.String`                                 | `Packages` 改成 Proxy，支持类名/数组描述符直接取类           |
+| `Packages.x.Y(...)` 不写 new（DexPlugin）                                      | 类代理补 `apply` 陷阱                                        |
+| `new org.mozilla.javascript.Scriptable({...})` 当动态命名空间（L.js）          | prelude 里直接用 JS Proxy 模拟，属性访问走 `get`/`put`/`has` |
+| Java 里访问 `obj.STATIC_FIELD` / `obj.staticMethod()`（`ctx.STORAGE_SERVICE`） | 实例 get/call 回退静态成员                                   |
+| Java Long/Integer 参与 `String()`/比较（DBSettings）                           | JavaObject 实现 `Symbol.toPrimitive`                         |
+| 数字/布尔/数组传给 String 参数                                                 | 按 Rhino 规则转成字符串                                      |
+| JS 对象传给接口参数（`createFrameLayout({...})`）                              | 自动生成对象适配器（按方法名取 JS 函数）                     |
+| `Class.getMethod` 按实例 vs 静态调用                                           | 桥区分 `c`（静态）/`h`（实例），Class 对象也能调实例方法     |
+| `Threads.await*` 阻塞等 Future（JS 线程被占）                                  | CA 的 Threads.js 加 QuickJS 分支：同步等待直接内联执行       |
 
 **当前卡点（下一步的核心问题）**：`CA.showAgreementSync` 这类
 「JS 线程阻塞 + 等 UI 回调」的同步写法。QuickJS context 是单线程的，
@@ -567,16 +566,16 @@ JS 线程阻塞时 UI 线程的回调没法再进 JS，会死锁；`Semaphore.ac
 
 在模拟器上继续跑真实脚本，逐步补齐：
 
-| 问题 | 修复 |
-|------|------|
-| `new java.lang.Runnable(function(){...})` / 方法参数里直接传 JS 函数 | 桥新增 **raw RPC**（`__caRaw(op, args)`）：参数以 JSArray 原生值传过来，宿主按目标类型转换；函数→接口参数自动生成 SAM 适配器 |
-| `new android.content.DialogInterface.OnClickListener({...})` 等嵌套接口 | 桥解析嵌套类 `Outer$Inner`（`android.os.Build.VERSION`、`DialogInterface.OnClickListener`） |
-| Java 回调在 UI 线程执行，QuickJS 单线程 context 被跨线程访问 | `ScriptManager` 把 JS 线程/Looper 交给引擎；适配器回调 `post` 回 JS 线程执行（void 异步、有返回值 latch 等 30s） |
-| `org` / `com` / `javax` 未定义 | prelude 补顶层命名空间 |
-| `android.util.Log.e("CA", e)` 把 JS 对象当 String | 宿主用 JS 的 `String(value)` 做隐式 toString |
-| `java.lang.Class.forName(...).getMethod(name, [Class...])` | Class 值改回 handle 包装；varargs 支持「最后一个参数直接传 JS 数组」 |
-| `org.mozilla.javascript.Context.getCurrentContext()` 返回 null（L.js / DBSettings.js / DexPlugin.js 用） | prelude 提供 Rhino Context 垫片：`getWrapFactory().wrapJavaClass` / `toObject` / `getApplicationClassLoader` |
-| `ScriptInterface.wrapAsScriptable` | QuickJsEngine 用 Rhino 的 NativeJavaObject 实现（脚本 DBSettings 走同一条路径） |
+| 问题                                                                                                     | 修复                                                                                                                         |
+|----------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| `new java.lang.Runnable(function(){...})` / 方法参数里直接传 JS 函数                                     | 桥新增 **raw RPC**（`__caRaw(op, args)`）：参数以 JSArray 原生值传过来，宿主按目标类型转换；函数→接口参数自动生成 SAM 适配器 |
+| `new android.content.DialogInterface.OnClickListener({...})` 等嵌套接口                                  | 桥解析嵌套类 `Outer$Inner`（`android.os.Build.VERSION`、`DialogInterface.OnClickListener`）                                  |
+| Java 回调在 UI 线程执行，QuickJS 单线程 context 被跨线程访问                                             | `ScriptManager` 把 JS 线程/Looper 交给引擎；适配器回调 `post` 回 JS 线程执行（void 异步、有返回值 latch 等 30s）             |
+| `org` / `com` / `javax` 未定义                                                                           | prelude 补顶层命名空间                                                                                                       |
+| `android.util.Log.e("CA", e)` 把 JS 对象当 String                                                        | 宿主用 JS 的 `String(value)` 做隐式 toString                                                                                 |
+| `java.lang.Class.forName(...).getMethod(name, [Class...])`                                               | Class 值改回 handle 包装；varargs 支持「最后一个参数直接传 JS 数组」                                                         |
+| `org.mozilla.javascript.Context.getCurrentContext()` 返回 null（L.js / DBSettings.js / DexPlugin.js 用） | prelude 提供 Rhino Context 垫片：`getWrapFactory().wrapJavaClass` / `toObject` / `getApplicationClassLoader`                 |
+| `ScriptInterface.wrapAsScriptable`                                                                       | QuickJsEngine 用 Rhino 的 NativeJavaObject 实现（脚本 DBSettings 走同一条路径）                                              |
 
 当前进度：脚本能编译、执行到**模块初始化阶段**，剩下的是个别模块的 Rhino 兼容行为差异
 （`new org.mozilla.javascript.Scriptable({...})` 被当成模块对象、`cx.toObject` 语义等）。
@@ -619,13 +618,13 @@ QuickJS 不行。需要：
 
 QuickJS 是 native 库（`.so`），不管用哪个绑定，预编译产物都只覆盖部分 ABI：
 
-| ABI | QuickJS | 说明 |
-|-----|---------|------|
-| arm64-v8a | ✅ | 主流 64 位 ARM |
-| x86_64 | ✅ | 模拟器 / Chromebook |
-| armeabi-v7a | ✅ | 本 AAR 自带 so，能加载就用 |
-| x86 | ✅ | 本 AAR 自带 so |
-| riscv64 / 其他 | ❌ | 没有 so，回退 Rhino |
+| ABI            | QuickJS | 说明                       |
+|----------------|---------|----------------------------|
+| arm64-v8a      | ✅      | 主流 64 位 ARM             |
+| x86_64         | ✅      | 模拟器 / Chromebook        |
+| armeabi-v7a    | ✅      | 本 AAR 自带 so，能加载就用 |
+| x86            | ✅      | 本 AAR 自带 so             |
+| riscv64 / 其他 | ❌      | 没有 so，回退 Rhino        |
 
 所以引擎层要**有回退链**，已经铺好：
 
@@ -646,13 +645,13 @@ E1 接 QuickJS 时只要把 `QuickJsEngine()` 加到 `JsEngines.candidates()` �
 和 `rhino-1.9.2.jar` 在桌面 JVM 上对比。Rhino 按 Android 上的配置 `optimizationLevel=-1`。
 **这不是设备数据，只是方向性参考**；最终结论要等 E2 桥做完后在真机上按真实脚本测（E4）。
 
-| 项目 | QuickJS | Rhino | 结论 |
-|------|---------|-------|------|
-| 编译 ~250KB 脚本 | 8 ms | 29 ms | QuickJS 快 ~3.6x |
-| 冷启动（首次加载 so / 初始化上下文） | 150 ms（首次 load so） | ~1 ms（enter+initStandardObjects） | 首次加载有成本，之后创建很快 |
-| 表构建+访问 20k | 181 ms | 141 ms | Rhino 快 1.3x |
-| 正则匹配 50k | 512 ms | 254 ms | **Rhino 快 2x**（Rhino 用 java.util.regex，QuickJS 是自带的 libregexp） |
-| 纯函数调用 1M | 958 ms | 1211 ms | QuickJS 快 1.3x |
+| 项目                                 | QuickJS                | Rhino                              | 结论                                                                    |
+|--------------------------------------|------------------------|------------------------------------|-------------------------------------------------------------------------|
+| 编译 ~250KB 脚本                     | 8 ms                   | 29 ms                              | QuickJS 快 ~3.6x                                                        |
+| 冷启动（首次加载 so / 初始化上下文） | 150 ms（首次 load so） | ~1 ms（enter+initStandardObjects） | 首次加载有成本，之后创建很快                                            |
+| 表构建+访问 20k                      | 181 ms                 | 141 ms                             | Rhino 快 1.3x                                                           |
+| 正则匹配 50k                         | 512 ms                 | 254 ms                             | **Rhino 快 2x**（Rhino 用 java.util.regex，QuickJS 是自带的 libregexp） |
+| 纯函数调用 1M                        | 958 ms                 | 1211 ms                            | QuickJS 快 1.3x                                                         |
 
 解读：
 
