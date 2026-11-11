@@ -27,7 +27,7 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           packages: "platforms;android-37.0"
 
