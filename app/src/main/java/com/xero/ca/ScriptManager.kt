@@ -151,7 +151,7 @@ class ScriptManager private constructor() {
                 Log.e("Script", "Loading hotfix failed", e)
             }
         }
-        return InputStreamReader(ScriptFileStream.fromAsset(bindContext!!, "script.js"))
+        return InputStreamReader(ScriptFileStream.fromAsset(bindContext!!, "script.cjs"))
     }
 
     @Throws(IOException::class)

@@ -59,7 +59,7 @@ class ScriptFileStream private constructor(key: ByteArray?, stream: InputStream?
          *   - v3.1 只对 T+ 轮换时：T+ 上是新证书，旧系统上仍是原证书，两者都要能解开同一份脚本；
          *   - 轮换后 v1(JAR)/v2 仍由最初那把密钥签（API 28 以下只认它），v3 用的是新密钥；
          *   - 多签名 APK 的历史格式是「所有证书首尾相接」当密钥。
-         * 而 assets/script.js 只能按其中一张证书异或加密，所以这里挨个试。
+         * 而 assets/script.cjs 只能按其中一张证书异或加密，所以这里挨个试。
          */
         @JvmStatic
         @Throws(IOException::class)

@@ -6,7 +6,7 @@ plugins {
     id("com.android.application")
 }
 
-// 脚本（assets/script.js）是用「签名证书 DER 逐字节异或 + GZIP」加密的，
+// 脚本（assets/script.cjs）是用「签名证书 DER 逐字节异或 + GZIP」加密的，
 // 所以签名用的密钥必须和 CA 侧 app/signatures/*.signature 里的证书一致。
 // 这里统一用 app/signatures/release.keystore（alias: testkey）：
 //   debug 包  -> 由 Gradle 用它签名，配合 signatures/debug.signature

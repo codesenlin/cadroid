@@ -37,7 +37,7 @@ AGP、Kotlin、AndroidX、Rhino、QuickJS 和 buildscript 的 CVE 修补版本�
 ### 1. 先决条件：准备核心脚本
 
 本仓库只是壳子，核心逻辑用 Kotlin/JS 编写并打包成 JS，源码在 [CA](https://github.com/codesenlin/CA)。构建前先确认
-`app/src/main/assets/script.js` 存在——推荐直接用 CA 的构建工具生成（它会把下面这套活全干完）：
+`app/src/main/assets/script.cjs` 存在——推荐直接用 CA 的构建工具生成（它会把下面这套活全干完）：
 
 ```bash
 cd ../CA
@@ -47,14 +47,14 @@ node ./cabuildtools/main.js shellBuildRelease     # 正式包：额外做 dex �
 
 - 构建工具读 CA 的 `config/shell.json`，SDK / JDK / cadroid 路径会自动探测，无需手填 local 文件
 - 正式包会导出到 `CA/build/dist/命令助手(x.y.z).apk`；日常调试也可以直接 `./gradlew :app:assembleDebug`
-  （用 `assets/` 里已有的 `script.js`）
+  （用 `assets/` 里已有的 `script.cjs`）
 
 <details>
 <summary>为什么脚本要加密（手动做法）</summary>
 
-`assets/script.js` 是「GZIP 压缩 + 用 APK 签名证书 DER 逐字节异或」后的结果，运行时由
+`assets/script.cjs` 是「GZIP 压缩 + 用 APK 签名证书 DER 逐字节异或」后的结果，运行时由
 `ScriptFileStream` 读取当前签名证书解密。所以签名密钥必须和 `app/signatures/*.signature`
-保持一致。手动打包步骤：未压缩的脚本写入 `assets/script.js` → GZIP → 用签名证书 DER 异或加密。
+保持一致。手动打包步骤：未压缩的脚本写入 `assets/script.cjs` → GZIP → 用签名证书 DER 异或加密。
 </details>
 
 ### 2. 编译 APK
@@ -69,7 +69,7 @@ JDK 不用手动装：字节码级别固定在 Java 17（`compileOptions`），�
 foojay-resolver，缺了会自动下载（Android Studio 用的是它自带的 JBR，一般直接命中）。
 从命令行跑 Gradle 时仍需要环境里有一个 Java（或设 `JAVA_HOME`），否则 wrapper 起不来。
 
-`app/signatures/`、`app/libs/`、`assets/script.js` 都不入库，缺了也能编译。
+`app/signatures/`、`app/libs/`、`assets/script.cjs` 都不入库，缺了也能编译。
 
 ## 本地依赖（可选）
 
