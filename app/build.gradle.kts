@@ -31,6 +31,11 @@ val tdAvailable = file("libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar").exists()
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
 val caaccelAvailable = file("libs/caaccel.jar").exists()
 
+// 版本号以 app/version.json 为唯一来源；README 的动态徽标也读这个文件。
+val appVersion = JsonSlurper().parse(file("version.json")) as Map<*, *>
+val appVersionName = appVersion["version"] as String
+val appVersionCode = (appVersion["versionCode"] as Number).toInt()
+
 // Rhino 兼容编译模式（Rhino 1.9 在 minSdk 21 下的 dex 兼容，见 docs/migration-kotlin-quickjs.md）：
 //   true  = 调试包也走 R8 的 dex 流程。Rhino 1.9 的 SlotMapOwner$ThreadedAccess
 //           用了 MethodHandle.invoke，minSdk 21 下 D8 不做兼容转换，不开 R8 会
@@ -71,8 +76,8 @@ android {
         applicationId = "com.xero.ca"
         minSdk = 21
         targetSdk = 33
-        versionCode = 20765
-        versionName = "1.2.16"
+        versionCode = appVersionCode
+        versionName = appVersionName
         buildConfigField("int", "SHELL_VERSION", "26")
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField("boolean", "GDT_ENABLED", gdtAvailable.toString())
@@ -145,6 +150,7 @@ dependencies {
         implementation(files("libs/caaccel.jar"))
     }
 
+    implementation(project(":pews-api-wrapper"))
 
     implementation(libs.androidx.annotation)
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
@@ -153,7 +159,6 @@ dependencies {
     implementation(libs.dalvik.dx)
     implementation(libs.zip4j)
     implementation(libs.java.websocket)
-    implementation(project(":pews-api-wrapper"))
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
