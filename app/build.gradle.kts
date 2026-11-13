@@ -171,13 +171,12 @@ dependencies {
     implementation(libs.quickjs.kt.android)
 }
 
-// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑见 app/build.gradle.kts
+// 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑在下方
 tasks.named("preBuild") {
     dependsOn("generateSecret")
 }
 
-// ===== Secret 配置合并（原 secret-config 逻辑） =====
-// 密钥/账号配置的逐条合并逻辑（由 app/build.gradle.kts 通过 apply(from = ...) 引入）。
+// ===== Secret 配置合并 =====
 //
 // 三份候选 JSON（都在 app/secrets/ 下）：
 //   1. local.json      本机私人配置（.gitignore 忽略，可选）

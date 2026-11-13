@@ -95,8 +95,6 @@ public class MCSocketServer extends WebSocketServer {
 
     private JsonParser parser = new JsonParser();
 
-    // TODO: split this function up so it isn't a cluttered mess
-    // TODO: add process queue (if Java-WebSocket doesn't implement one already)
     @Override
     public void onMessage(WebSocket conn, String message) {
         if (message == null) {
@@ -109,10 +107,6 @@ public class MCSocketServer extends WebSocketServer {
         MCClient.ListenerRequest request = null;
 
         MCClient client = clients.get(conn);
-
-        if (client.requiresEncryption()) {
-            //message = client.decryptMessage(message);
-        }
 
         try {
             JsonObject messageJson = parser.parse(message).getAsJsonObject();

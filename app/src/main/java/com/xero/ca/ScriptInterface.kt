@@ -14,7 +14,6 @@ import com.xero.ca.gen.Secret
 import com.xero.ca.script.AnalyticsPlatform
 import com.xero.ca.script.RhinoFrameLayout
 import com.xero.ca.script.RhinoWebSocketClientHelper
-import com.xero.ca.script.PewsWebSocketServerHelper
 import com.xero.ca.script.PewsWebSocketBridge
 import com.xero.ca.script.RhinoWebView
 import com.xero.ca.script.ScriptObject
@@ -132,9 +131,6 @@ class ScriptInterface(manager: ScriptManager) {
     }
 
     fun getScriptManager(): ScriptManager = mManager
-
-    fun createWebSocketHelper(port: Int, delegate: PewsWebSocketServerHelper.DelegateInterface?): PewsWebSocketServerHelper =
-        PewsWebSocketServerHelper(port, delegate)
 
     fun createPewsWebSocketBridge(port: Int, listener: PewsWebSocketBridge.Listener?): PewsWebSocketBridge =
         PewsWebSocketBridge(port, listener)
