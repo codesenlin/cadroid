@@ -1,0 +1,9 @@
+nbproject/private/
+nbproject/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+/src/mcpews/listeners/ServerGUIFX.java
+/src/resources/fxml/ServerGUI.fxml
