@@ -153,6 +153,7 @@ dependencies {
     implementation(libs.dalvik.dx)
     implementation(libs.zip4j)
     implementation(libs.java.websocket)
+    implementation(project(":pews-api-wrapper"))
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino

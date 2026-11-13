@@ -11,6 +11,7 @@ androidx-core-ktx = "1.17.0"
 dalvik-dx = "16.0.1"
 zip4j = "2.11.6"
 java-websocket = "1.6.0"
+gson = "2.11.0"
 rhino = "1.9.2"
 quickjs = "1.0.18"
 gdt-union = "4.712.1582"
@@ -31,6 +32,7 @@ androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx
 dalvik-dx = { module = "com.jakewharton.android.repackaged:dalvik-dx", version.ref = "dalvik-dx" }
 zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
 java-websocket = { module = "org.java-websocket:Java-WebSocket", version.ref = "java-websocket" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
 rhino-engine = { module = "org.mozilla:rhino-engine", version.ref = "rhino" }
 rhino-kotlin = { module = "org.mozilla:rhino-kotlin", version.ref = "rhino" }
