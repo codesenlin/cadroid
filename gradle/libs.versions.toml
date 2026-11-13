@@ -7,7 +7,7 @@ kotlin = "2.4.21"
 desugar-jdk-libs = "2.1.5"
 androidx-annotation = "1.11.0"
 # 1.19.x 要求 minSdk 23；App 仍保持 minSdk 21，暂留 1.17.0
-androidx-core-ktx = "1.17.0"
+androidx-core-ktx = "1.19.1"
 dalvik-dx = "16.0.1"
 zip4j = "2.11.6"
 java-websocket = "1.6.0"
