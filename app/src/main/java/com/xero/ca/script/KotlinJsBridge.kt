@@ -29,7 +29,7 @@ class KotlinJsBridge(private val context: Context) {
         val args = parseArgs(argsJson)
         val type = Class.forName(className, true, context.classLoader)
         val ctor = type.constructors.firstOrNull {
-            it.parameterCount == args.size && fits(it.parameterTypes, args)
+            it.parameterTypes.size == args.size && fits(it.parameterTypes, args)
         } ?: throw IllegalArgumentException("No constructor on $className for ${args.size} args")
         return ctor.newInstance(*convertArgs(ctor.parameterTypes, args))
     }
@@ -38,7 +38,7 @@ class KotlinJsBridge(private val context: Context) {
         val args = parseArgs(argsJson)
         val type = Class.forName(className, true, context.classLoader)
         val method = type.methods.firstOrNull {
-            it.name == methodName && it.parameterCount == args.size && fits(it.parameterTypes, args)
+            it.name == methodName && it.parameterTypes.size == args.size && fits(it.parameterTypes, args)
         } ?: throw IllegalArgumentException("No method $className.$methodName for ${args.size} args")
         return method.invoke(null, *convertArgs(method.parameterTypes, args))
     }
