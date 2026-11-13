@@ -139,6 +139,15 @@ Secret 配置（逐条合并）:
 
 `core.sign` 会用两把 key 依次验签，**任一通过即接受**；两把都不通过才拒绝。
 
+## 致谢
+
+本项目使用或参考了以下开源项目，感谢作者与贡献者：
+
+- [PEWS-API](https://github.com/jocopa3/PEWS-API) — Minecraft WebSocket 协议 SDK，以 git subtree 方式集成
+- [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) — WebSocket 传输层
+- [Rhino](https://github.com/mozilla/rhino) — Android 脚本引擎
+- [Kotlin](https://github.com/JetBrains/kotlin) — Kotlin Multiplatform / Kotlin/JS
+
 ## 文档
 
 | 文档                                                                 | 说明                                                          |
