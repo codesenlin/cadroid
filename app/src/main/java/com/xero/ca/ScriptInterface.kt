@@ -3,6 +3,7 @@ package com.xero.ca
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -366,11 +367,7 @@ class ScriptInterface(manager: ScriptManager) {
                 } else {
                     serviceIntent.action = ScriptService.ACTION_RUN
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    ctx.startForegroundService(serviceIntent)
-                } else {
-                    ctx.startService(serviceIntent)
-                }
+                ContextCompat.startForegroundService(ctx, serviceIntent)
             }
         }
 
