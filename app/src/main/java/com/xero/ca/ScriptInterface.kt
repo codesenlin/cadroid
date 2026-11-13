@@ -92,6 +92,30 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun getContext(): Context = mContext
 
+    /** Android SDK 版本统一由壳层提供，CA 脚本不再直接读 Build.VERSION。 */
+    fun getAndroidSdk(): Int = Build.VERSION.SDK_INT
+
+    fun isAndroidSdkAtLeast(level: Int): Boolean = Build.VERSION.SDK_INT >= level
+
+    // 常用 Android 能力统一由壳层判断，CA 只消费布尔能力。
+    fun isOverlayWindowTypeSupported(): Boolean = Build.VERSION.SDK_INT >= 26
+    fun isTileServiceSupported(): Boolean = Build.VERSION.SDK_INT >= 24
+    fun isPendingIntentFlagsSupported(): Boolean = Build.VERSION.SDK_INT >= 23
+    fun isMutablePendingIntentSupported(): Boolean = Build.VERSION.SDK_INT >= 31
+    fun isForegroundServicePendingIntentSupported(): Boolean = Build.VERSION.SDK_INT >= 27
+    fun isShortcutSupported(): Boolean = Build.VERSION.SDK_INT >= 26
+    fun isDocumentPathSupported(): Boolean = Build.VERSION.SDK_INT >= 26
+    fun isScopedStorageSupported(): Boolean = Build.VERSION.SDK_INT >= 29
+    fun isManageExternalStorageSupported(): Boolean = Build.VERSION.SDK_INT >= 30
+    fun isStorageByPackageSupported(): Boolean = Build.VERSION.SDK_INT >= 33
+    fun isImageDecoderSupported(): Boolean = Build.VERSION.SDK_INT >= 28
+    fun isNotificationChannelSupported(): Boolean = Build.VERSION.SDK_INT >= 26
+    fun isLocaleListSupported(): Boolean = Build.VERSION.SDK_INT >= 24
+    fun isHtmlSegmentSupported(): Boolean = Build.VERSION.SDK_INT >= 24
+    fun isExtendedColorApiSupported(): Boolean = Build.VERSION.SDK_INT >= 26
+    fun isColorLongApiSupported(): Boolean = Build.VERSION.SDK_INT >= 29
+    fun isOverlaySettingsSupported(): Boolean = Build.VERSION.SDK_INT >= 23
+
     fun getBindActivity(): SplashActivity? = mBindActivity
 
     fun getBindService(): ScriptService? = mBindService
