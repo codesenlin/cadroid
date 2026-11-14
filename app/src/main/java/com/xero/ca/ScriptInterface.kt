@@ -149,6 +149,16 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun getPreference(): Preference = mPreference
 
+    fun getAdsEnabled(): Boolean = mPreference.getAdsEnabled()
+
+    fun setAdsEnabled(v: Boolean) = mPreference.setAdsEnabled(v)
+
+    fun getAnalyticsEnabled(): Boolean = mPreference.getAnalyticsEnabled()
+
+    fun setAnalyticsEnabled(v: Boolean) = mPreference.setAnalyticsEnabled(v)
+
+    fun isAdSupported(): Boolean = BuildConfig.GDT_ENABLED
+
     fun getAccessibilitySvc(): AccessibilitySvc? = AccessibilitySvc.getInstance()
 
     fun goToAccessibilitySetting() {

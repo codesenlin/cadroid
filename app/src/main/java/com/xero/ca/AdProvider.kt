@@ -69,7 +69,8 @@ class AdProvider {
             mMessage = null
         }
         mHandler.removeCallbacksAndMessages(null)
-        if (Preference.getInstance(activity).checkFirstRun() || !isAdEnabled()) {
+        val preference = Preference.getInstance(activity)
+        if (preference.checkFirstRun() || !preference.getAdsEnabled() || !isAdEnabled()) {
             // 首次启动或未配置广告位时不请求广告，直接进入脚本
             mADListener.onADDismissed()
             return

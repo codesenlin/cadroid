@@ -44,6 +44,22 @@ class Preference private constructor(context: Context) {
         mPreferences.edit { putBoolean(SETTING_START_ON_BOOT, v) }
     }
 
+    @ScriptObject
+    fun getAdsEnabled(): Boolean = mPreferences.getBoolean(SETTING_ADS_ENABLED, true)
+
+    @ScriptObject
+    fun setAdsEnabled(v: Boolean) {
+        mPreferences.edit { putBoolean(SETTING_ADS_ENABLED, v) }
+    }
+
+    @ScriptObject
+    fun getAnalyticsEnabled(): Boolean = mPreferences.getBoolean(SETTING_ANALYTICS_ENABLED, true)
+
+    @ScriptObject
+    fun setAnalyticsEnabled(v: Boolean) {
+        mPreferences.edit { putBoolean(SETTING_ANALYTICS_ENABLED, v) }
+    }
+
     fun getDebugSource(): String = mPreferences.getString("debugSource", "") ?: ""
 
     fun checkFirstRun(): Boolean {
@@ -67,6 +83,8 @@ class Preference private constructor(context: Context) {
         const val SETTING_HIDE_SPLASH = "hideSplash"
         const val SETTING_HIDE_NOTIFICATION = "hideNotification"
         const val SETTING_START_ON_BOOT = "bootStart"
+        const val SETTING_ADS_ENABLED = "adsEnabled"
+        const val SETTING_ANALYTICS_ENABLED = "analyticsEnabled"
         const val SETTING_FIRST_RUN = "firstRun"
         const val SETTING_USER_ID = "userID"
         const val PREFERENCE_NAME = "user_settings"
