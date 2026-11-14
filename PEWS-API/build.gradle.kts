@@ -1,5 +1,6 @@
 plugins {
     java
+    kotlin("jvm")
 }
 
 group = "mcpews"
@@ -14,9 +15,19 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+provider {
+}.let {}
+
 sourceSets {
     main {
         java.srcDirs("src")
+        kotlin.srcDirs("src")
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
     }
 }
 
@@ -39,6 +50,7 @@ val desktopEnabled = providers.gradleProperty("pews.desktop")
 if (desktopEnabled) {
     val desktop = sourceSets.create("desktop") {
         java.srcDir("desktop/src/java")
+        kotlin.srcDir("desktop/src/java")
         compileClasspath += sourceSets.main.get().output
         compileClasspath += configurations.runtimeClasspath.get()
         runtimeClasspath += sourceSets.main.get().output

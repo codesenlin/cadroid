@@ -45,24 +45,24 @@ class PewsWebSocketBridge(port: Int, delegate: Listener?) :
     private val pewsListener = object : MCListener {
         override fun onConnected(client: MCClient) {
             active = client
-            listener.onOpen(client.socket.remoteSocketAddress?.toString() ?: "")
+            listener.onOpen(client.getSocket().remoteSocketAddress?.toString() ?: "")
         }
 
-        override fun onDisconnected(client: MCClient) {
+        override fun onDisconnected(client: MCClient?) {
             if (active === client) active = null
             listener.onClose()
         }
 
         override fun onEvent(client: MCClient, eventMessage: MCMessage) {
-            listener.onEvent(eventMessage.messageText)
+            listener.onEvent(eventMessage.getMessageText())
         }
 
         override fun onResponse(client: MCClient, responseMessage: MCMessage, requestMessage: MCMessage) {
-            emitResponse(requestMessage, responseMessage.messageText)
+            emitResponse(requestMessage, responseMessage.getMessageText())
         }
 
         override fun onError(client: MCClient, errorMessage: MCMessage, requestMessage: MCMessage) {
-            emitResponse(requestMessage, errorMessage.messageText)
+            emitResponse(requestMessage, errorMessage.getMessageText())
         }
     }
 
@@ -78,9 +78,9 @@ class PewsWebSocketBridge(port: Int, delegate: Listener?) :
         listener.onError(ex.message ?: ex.javaClass.simpleName, ex is BindException)
     }
 
-    fun isConnected(): Boolean = active?.socket?.isOpen == true
+    fun isConnected(): Boolean = active?.getSocket()?.isOpen == true
 
-    fun getRemoteAddress(): String = active?.socket?.remoteSocketAddress?.toString() ?: ""
+    fun getRemoteAddress(): String = active?.getSocket()?.remoteSocketAddress?.toString() ?: ""
 
     fun closeConnection() {
         active?.close()
@@ -112,17 +112,17 @@ class PewsWebSocketBridge(port: Int, delegate: Listener?) :
         }
         val parsed = parser.parseCommand(if (command.startsWith("/")) command else "/$command") ?: return false
         val message = MCMessage(parsed)
-        callbacks[message.header.requestId] = callbackId
+        callbacks[message.getHeader()!!.getRequestId()!!] = callbackId
         client.send(pewsListener, message)
         return true
     }
 
     private fun emitResponse(request: MCMessage, json: String) {
-        val id = callbacks.remove(request.header.requestId) ?: return
+        val id = callbacks.remove(request.getHeader()!!.getRequestId()!!) ?: return
         listener.onResponse(id, json)
     }
 
     @Suppress("unused")
     private fun isCommandPurpose(message: MCMessage): Boolean =
-        message.purpose == MessagePurposeType.COMMAND_REQUEST
+        message.getPurpose() == MessagePurposeType.COMMAND_REQUEST
 }
