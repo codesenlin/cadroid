@@ -150,7 +150,7 @@ dependencies {
         implementation(files("libs/caaccel.jar"))
     }
 
-    implementation(project(":pews-api-wrapper"))
+    implementation(project(":pews-api"))
 
     implementation(libs.androidx.annotation)
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）

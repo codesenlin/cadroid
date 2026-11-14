@@ -25,6 +25,7 @@ import mcpews.command.SayCommand;
 import mcpews.logger.*;
 import mcpews.message.*;
 import mcpews.util.ChatFormatCode;
+import mcpews.util.DesktopColors;
 
 /**
  *
@@ -647,67 +648,67 @@ public class ServerGUI extends javax.swing.JFrame implements MCListener {
                 default:
                     return false;
                 case ChatFormatCode.AQUA_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.AQUA);
+                    StyleConstants.setForeground(attributes, DesktopColors.AQUA);
                     StyleConstants.setBackground(attributes, darkerBackground);
                     break;
                 case ChatFormatCode.BLACK_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.BLACK);
+                    StyleConstants.setForeground(attributes, DesktopColors.BLACK);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.BLUE_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.BLUE);
+                    StyleConstants.setForeground(attributes, DesktopColors.BLUE);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.BOLD_CHAR:
                     StyleConstants.setBold(attributes, true);
                     break;
                 case ChatFormatCode.DARK_AQUA_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.DARK_AQUA);
+                    StyleConstants.setForeground(attributes, DesktopColors.DARK_AQUA);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.DARK_BLUE_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.DARK_BLUE);
+                    StyleConstants.setForeground(attributes, DesktopColors.DARK_BLUE);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.DARK_GRAY_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.DARK_GRAY);
+                    StyleConstants.setForeground(attributes, DesktopColors.DARK_GRAY);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.DARK_GREEN_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.DARK_GREEN);
+                    StyleConstants.setForeground(attributes, DesktopColors.DARK_GREEN);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.DARK_PURPLE_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.DARK_PURPLE);
+                    StyleConstants.setForeground(attributes, DesktopColors.DARK_PURPLE);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.DARK_RED_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.DARK_RED);
+                    StyleConstants.setForeground(attributes, DesktopColors.DARK_RED);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.GOLD_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.GOLD);
+                    StyleConstants.setForeground(attributes, DesktopColors.GOLD);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.GRAY_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.GRAY);
+                    StyleConstants.setForeground(attributes, DesktopColors.GRAY);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.GREEN_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.GREEN);
+                    StyleConstants.setForeground(attributes, DesktopColors.GREEN);
                     StyleConstants.setBackground(attributes, darkerBackground);
                     break;
                 case ChatFormatCode.ITALIC_CHAR:
                     StyleConstants.setItalic(attributes, true);
                     break;
                 case ChatFormatCode.LIGHT_PURPLE_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.LIGHT_PURPLE);
+                    StyleConstants.setForeground(attributes, DesktopColors.LIGHT_PURPLE);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.OBFUSCATED_CHAR:
                     break;
                 case ChatFormatCode.RED_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.RED);
+                    StyleConstants.setForeground(attributes, DesktopColors.RED);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.RESET_CHAR:
@@ -715,7 +716,7 @@ public class ServerGUI extends javax.swing.JFrame implements MCListener {
                     StyleConstants.setItalic(attributes, false);
                     StyleConstants.setStrikeThrough(attributes, false);
                     StyleConstants.setUnderline(attributes, false);
-                    StyleConstants.setForeground(attributes, ChatFormatCode.BLACK);
+                    StyleConstants.setForeground(attributes, DesktopColors.BLACK);
                     StyleConstants.setBackground(attributes, background);
                     break;
                 case ChatFormatCode.STRIKETHROUGH_CHAR:
@@ -725,11 +726,11 @@ public class ServerGUI extends javax.swing.JFrame implements MCListener {
                     StyleConstants.setUnderline(attributes, true);
                     break;
                 case ChatFormatCode.WHITE_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.WHITE);
+                    StyleConstants.setForeground(attributes, DesktopColors.WHITE);
                     StyleConstants.setBackground(attributes, darkerBackground);
                     break;
                 case ChatFormatCode.YELLOW_CHAR:
-                    StyleConstants.setForeground(attributes, ChatFormatCode.YELLOW);
+                    StyleConstants.setForeground(attributes, DesktopColors.YELLOW);
                     StyleConstants.setBackground(attributes, darkerBackground);
                     break;
             }
@@ -879,12 +880,12 @@ public class ServerGUI extends javax.swing.JFrame implements MCListener {
                                 break;
                             case "CHAT":
                                 StyleConstants.setForeground(dateKeyword, Color.black);
-                                StyleConstants.setForeground(levelKeyword, ChatFormatCode.DARK_GREEN);
+                                StyleConstants.setForeground(levelKeyword, DesktopColors.DARK_GREEN);
                                 StyleConstants.setForeground(messageKeyword, Color.black);
                                 break;
                             case "DEBUG":
                                 StyleConstants.setForeground(dateKeyword, Color.black);
-                                StyleConstants.setForeground(levelKeyword, ChatFormatCode.DARK_PURPLE);
+                                StyleConstants.setForeground(levelKeyword, DesktopColors.DARK_PURPLE);
                                 StyleConstants.setForeground(messageKeyword, Color.black);
                                 break;
                         }

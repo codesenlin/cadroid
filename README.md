@@ -147,7 +147,7 @@ Secret 配置（逐条合并）:
 
 本项目使用或参考了以下开源项目，感谢作者与贡献者：
 
-- [PEWS-API](https://github.com/jocopa3/PEWS-API) — Minecraft WebSocket 协议 SDK，以 git subtree 方式集成
+- [PEWS-API](https://github.com/jocopa3/PEWS-API) — Minecraft WebSocket 协议 SDK，本仓库使用 [Android 兼容 fork](https://github.com/codesenlin/PEWS-API)
 - [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) — WebSocket 传输层
 - [Rhino](https://github.com/mozilla/rhino) — Android 脚本引擎
 - [quickjs-kt](https://github.com/dokar3/quickjs-kt) — Android QuickJS 绑定，侧载加速 worker（Apache-2.0）
