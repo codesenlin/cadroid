@@ -27,7 +27,7 @@ val caPasswordFile = file("signatures/release.password")
 val gdtRequested = (findProperty("ca.withGdt") ?: "true").toString() != "false"
 val gdtAvailable = gdtRequested && file("libs/GDTActionSDK.min.1.9.8.aar").exists()
 val tdAvailable = file("libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar").exists()
-// 加速库：CA 仓库的 caaccel/build.sh 产出。缺失时只是不启用 Java 加速，
+// 加速库：在 CA 仓库执行 npm run caaccel 产出 build/caaccel.jar，复制到 libs/。缺失时只是不启用 Java 加速，
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
 val caaccelAvailable = file("libs/caaccel.jar").exists()
 
@@ -144,7 +144,7 @@ dependencies {
         implementation(libs.gdt.union)
     }
 
-    // 命令助手高性能加速库（源码在 CA 仓库的 caaccel/，用 caaccel/build.sh 构建）
+    // 命令助手高性能加速库（源码在 CA 仓库的 caaccel/，用 npm run caaccel 构建）
     // 可选：jar 不在时不引入，Rhino 里 Packages 解析失败，JS 侧自动走回退实现
     if (caaccelAvailable) {
         implementation(files("libs/caaccel.jar"))

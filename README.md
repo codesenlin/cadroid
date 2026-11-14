@@ -1,10 +1,10 @@
 # 命令助手 Android
 
-[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
 [![CI](https://github.com/codesenlin/cadroid/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/codesenlin/cadroid/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/codesenlin/cadroid?style=flat-square&label=release&color=ff69b4)](https://github.com/codesenlin/cadroid/releases/latest)
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
 [![License](https://img.shields.io/github/license/codesenlin/cadroid?style=flat-square&label=license&color=blue)](LICENSE)
 [![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcodesenlin%2Fcadroid%2Fmain%2Fapp%2Fversion.json&query=%24.version&label=version&style=flat-square&color=ff69b4)](https://github.com/codesenlin/cadroid)
+[![Release](https://img.shields.io/github/v/release/codesenlin/cadroid?style=flat-square&label=release&color=ff69b4)](https://github.com/codesenlin/cadroid/releases/latest)
 
 ## 简介
 
@@ -150,6 +150,7 @@ Secret 配置（逐条合并）:
 - [PEWS-API](https://github.com/jocopa3/PEWS-API) — Minecraft WebSocket 协议 SDK，以 git subtree 方式集成
 - [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) — WebSocket 传输层
 - [Rhino](https://github.com/mozilla/rhino) — Android 脚本引擎
+- [quickjs-kt](https://github.com/dokar3/quickjs-kt) — Android QuickJS 绑定，侧载加速 worker（Apache-2.0）
 - [Kotlin](https://github.com/JetBrains/kotlin) — Kotlin Multiplatform / Kotlin/JS
 
 ## 文档
