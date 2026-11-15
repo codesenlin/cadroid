@@ -36,15 +36,6 @@ val appVersion = JsonSlurper().parse(file("version.json")) as Map<*, *>
 val appVersionName = appVersion["version"] as String
 val appVersionCode = (appVersion["versionCode"] as Number).toInt()
 
-// 风味名由 CA 构建工具通过 -Pca.flavor=<name> 传入；default 表示标准版。
-// 风味正式包：com.xero.ca.<flavor>，风味调试包：com.xero.ca.<flavor>.debug。
-val caFlavor = (findProperty("ca.flavor") ?: "default").toString().trim()
-val caFlavorSuffix = if (caFlavor.isEmpty() || caFlavor == "default") {
-    ""
-} else {
-    "." + caFlavor.replace(Regex("[^A-Za-z0-9_]"), "_")
-}
-
 // Rhino 兼容编译模式（Rhino 1.9 在 minSdk 21 下的 dex 兼容，见 docs/migration-kotlin-quickjs.md）：
 //   true  = 调试包也走 R8 的 dex 流程。Rhino 1.9 的 SlotMapOwner$ThreadedAccess
 //           用了 MethodHandle.invoke，minSdk 21 下 D8 不做兼容转换，不开 R8 会
@@ -93,8 +84,8 @@ android {
     }
     buildTypes {
         getByName("debug") {
-            // 调试版使用独立包名，可与正式版共存；风味调试包再加风味段
-            applicationIdSuffix = caFlavorSuffix + ".debug"
+            // 调试版使用独立包名，可与正式版共存，避免覆盖安装后分不清
+            applicationIdSuffix = ".debug"
             isDebuggable = true
             // Rhino 兼容编译模式（见文件开头的 rhinoCompat）：调试包也走 R8。
             // 不开启的话 assembleDebug 会直接报 "Error while dexing"。
@@ -106,10 +97,6 @@ android {
             isJniDebuggable = true
         }
         getByName("release") {
-            // 风味正式包使用独立包名，标准版保持 com.xero.ca
-            if (caFlavorSuffix.isNotEmpty()) {
-                applicationIdSuffix = caFlavorSuffix
-            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
