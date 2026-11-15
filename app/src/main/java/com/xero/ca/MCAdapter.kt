@@ -50,7 +50,7 @@ class MCAdapter(
         if (mConnected) return
         try {
             val intent = Intent("com.xero.ca.GameBridge")
-            intent.component = ComponentName("com.xero.ca", "com.xero.ca.GameBridgeService")
+            intent.component = ComponentName(mContext.packageName, "com.xero.ca.GameBridgeService")
             mContext.bindService(intent, this, Context.BIND_AUTO_CREATE)
         } catch (e: Exception) {
             toast("无法连接至命令助手安卓版\n$e")

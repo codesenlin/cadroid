@@ -84,6 +84,8 @@ android {
     }
     buildTypes {
         getByName("debug") {
+            // 调试版使用独立包名，可与正式版共存，避免覆盖安装后分不清
+            applicationIdSuffix = ".debug"
             isDebuggable = true
             // Rhino 兼容编译模式（见文件开头的 rhinoCompat）：调试包也走 R8。
             // 不开启的话 assembleDebug 会直接报 "Error while dexing"。

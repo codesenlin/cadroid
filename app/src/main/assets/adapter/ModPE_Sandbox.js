@@ -12,7 +12,7 @@ function saveStream(stream, path) {
 }
 
 var ctx = com.mojang.minecraftpe.MainActivity.currentMainActivity.get();
-var zf = new java.util.zip.ZipFile(ctx.getPackageManager().getApplicationInfo("com.xero.ca", 128).publicSourceDir);
+var zf = new java.util.zip.ZipFile(ctx.getPackageManager().getApplicationInfo(ctx.getPackageName(), 128).publicSourceDir);
 var df = new java.io.File(ctx.getDir("adapter", 0), "ca.dex").getAbsolutePath();
 saveStream(zf.getInputStream(zf.getEntry("classes.dex")), df);
 var Adapter = loadClass(ctx, df, "com.xero.ca.MCAdapter")(ctx, "ModPE in Sandbox", 2);

@@ -15,7 +15,7 @@ var Adapter = {
 		if (this.connected) return;
 		try {
 			var intent = new android.content.Intent("com.xero.ca.GameBridge");
-			intent.setComponent(new android.content.ComponentName("com.xero.ca", "com.xero.ca.GameBridgeService"));
+			intent.setComponent(new android.content.ComponentName(ctx.getPackageName(), "com.xero.ca.GameBridgeService"));
 			ctx.bindService(intent, this.connection, ctx.BIND_AUTO_CREATE);
 		} catch(e) {
 			this.toast("无法连接至命令助手安卓版\n" + e);
