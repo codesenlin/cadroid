@@ -81,6 +81,7 @@ android {
         buildConfigField("int", "SHELL_VERSION", "26")
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField("boolean", "GDT_ENABLED", gdtAvailable.toString())
+        buildConfigField("boolean", "TD_ENABLED", tdAvailable.toString())
     }
     buildTypes {
         getByName("debug") {

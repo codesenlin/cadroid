@@ -159,6 +159,8 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun isAdSupported(): Boolean = BuildConfig.GDT_ENABLED
 
+    fun isAnalyticsSupported(): Boolean = BuildConfig.TD_ENABLED
+
     fun getAccessibilitySvc(): AccessibilitySvc? = AccessibilitySvc.getInstance()
 
     fun goToAccessibilitySetting() {
