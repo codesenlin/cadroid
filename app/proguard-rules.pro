@@ -92,3 +92,6 @@
 
 # rhino-engine 的 JSR-223 接口在 Android 上不存在（未走 javax.script 路径）
 -dontwarn javax.script.**
+
+# CHelper JNI：类名/包名参与 native 符号，不能混淆
+-keep class yancey.chelper.core.** { *; }

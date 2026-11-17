@@ -13,6 +13,7 @@ import android.view.KeyEvent
 
 import com.xero.ca.gen.Secret
 import com.xero.ca.script.AnalyticsPlatform
+import com.xero.ca.script.CHelperBridge
 import com.xero.ca.script.RhinoFrameLayout
 import com.xero.ca.script.RhinoWebSocketClientHelper
 import com.xero.ca.script.PewsWebSocketBridge
@@ -171,6 +172,21 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun createPewsWebSocketBridge(port: Int, listener: PewsWebSocketBridge.Listener?): PewsWebSocketBridge =
         PewsWebSocketBridge(port, listener)
+
+    fun isCHelperAvailable(): Boolean =
+        CHelperBridge.isAvailable(mContext.assets)
+
+    fun probeCHelper(pack: String?, command: String): String =
+        CHelperBridge.probe(mContext.assets, pack ?: "", command)
+
+    fun chelperStructure(pack: String?, command: String): String =
+        CHelperBridge.structure(mContext.assets, pack ?: "", command)
+
+    fun chelperQuery(pack: String?, command: String, cursor: Int): String =
+        CHelperBridge.query(mContext.assets, pack ?: "", command, cursor)
+
+    fun chelperApplySuggestion(pack: String?, command: String, cursor: Int, which: Int): Array<String> =
+        CHelperBridge.applySuggestion(mContext.assets, pack ?: "", command, cursor, which)
 
     fun createWSClient(uri: String, delegate: RhinoWebSocketClientHelper.DelegateInterface?): RhinoWebSocketClientHelper =
         try {
