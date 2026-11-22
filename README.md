@@ -3,7 +3,7 @@
 [![CI](https://github.com/codesenlin/cadroid/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/codesenlin/cadroid/actions/workflows/ci.yml)
 [![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
 [![License](https://img.shields.io/github/license/codesenlin/cadroid?style=flat-square&label=license&color=blue)](LICENSE)
-[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcodesenlin%2Fcadroid%2Fmain%2Fapp%2Fversion.json&query=%24.version&label=version&style=flat-square&color=ff69b4)](https://github.com/codesenlin/cadroid)
+[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcodesenlin%2Fcadroid%2Fdev%2Fapp%2Fversion.json&query=%24.version&label=version&style=flat-square&color=ff69b4)](https://github.com/codesenlin/cadroid)
 
 ## 简介
 
