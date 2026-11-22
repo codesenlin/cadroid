@@ -3,6 +3,3 @@ plugins {
 }
 
 include(":app")
-
-include(":pews-api")
-project(":pews-api").projectDir = file("PEWS-API")

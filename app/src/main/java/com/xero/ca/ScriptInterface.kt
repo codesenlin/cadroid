@@ -170,11 +170,27 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun getScriptManager(): ScriptManager = mManager
 
+    fun isPewsAvailable(): Boolean = BuildConfig.PEWS_ENABLED
+
+    fun isJavaClassAvailable(name: String): Boolean = try {
+        Class.forName(name) != null
+    } catch (t: Throwable) {
+        false
+    }
+
+    fun getPrimaryAbi(): String = try {
+        android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: ""
+    } catch (t: Throwable) {
+        ""
+    }
+
     fun createPewsWebSocketBridge(port: Int, listener: PewsWebSocketBridge.Listener?): PewsWebSocketBridge =
         PewsWebSocketBridge(port, listener)
 
     fun isCHelperAvailable(): Boolean =
         CHelperBridge.isAvailable(mContext.assets)
+
+    fun isCHelperNativeAvailable(): Boolean = CHelperBridge.nativeAvailable()
 
     fun probeCHelper(pack: String?, command: String): String =
         CHelperBridge.probe(mContext.assets, pack ?: "", command)

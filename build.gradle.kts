@@ -53,6 +53,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("${rootDir}/app/libs/maven")
+        }
     }
 }
 

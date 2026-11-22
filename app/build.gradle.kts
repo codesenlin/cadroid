@@ -30,6 +30,11 @@ val tdAvailable = file("libs/SaaS_TalkingDataSDK_Android_V5.0.40.jar").exists()
 // 加速库：在 CA 仓库执行 npm run caaccel 产出 build/caaccel.jar，复制到 libs/。缺失时只是不启用 Java 加速，
 // JS 侧的 Accel.available() 会自动回退到等价实现，所以是可选项。
 val caaccelAvailable = file("libs/caaccel.jar").exists()
+// PEWS-API 是普通 jar；依赖不会自动传递，需要按文档手动补。
+// 缺失时用 src/stub/pews 的空实现，BuildConfig.PEWS_ENABLED=false。
+val pewsAvailable = file("libs/pews-api.jar").exists()
+// CHelper 是可选本地 AAR：CA 构建后放到 libs/chelper-core.aar。
+val chelperAvailable = file("libs/chelper-core.aar").exists()
 
 // 版本号以 app/version.json 为唯一来源；README 的动态徽标也读这个文件。
 val appVersion = JsonSlurper().parse(file("version.json")) as Map<*, *>
@@ -82,6 +87,8 @@ android {
         // 优量汇广告 SDK 是否已装配（本地有 GDTActionSDK aar 时为 true），见文件开头的说明
         buildConfigField("boolean", "GDT_ENABLED", gdtAvailable.toString())
         buildConfigField("boolean", "TD_ENABLED", tdAvailable.toString())
+        buildConfigField("boolean", "PEWS_ENABLED", pewsAvailable.toString())
+        buildConfigField("boolean", "CHELPER_ENABLED", chelperAvailable.toString())
     }
     buildTypes {
         getByName("debug") {
@@ -118,7 +125,17 @@ android {
                 java.directories.add("src/stub/gdt")
                 kotlin.directories.add("src/stub/gdt")
             }
-            // 三份配置只当数据源，由 app/build.gradle.kts 合并生成 com/xero/ca/gen/Secret.kt
+            if (pewsAvailable) {
+                java.directories.add("src/pews")
+                kotlin.directories.add("src/pews")
+            } else {
+                java.directories.add("src/stub/pews")
+                kotlin.directories.add("src/stub/pews")
+            }
+            if (!chelperAvailable) {
+                java.directories.add("src/stub/chelper")
+                kotlin.directories.add("src/stub/chelper")
+            }
             kotlin.directories.add(layout.buildDirectory.dir("generated/source/secret").get().asFile.path)
         }
     }
@@ -129,6 +146,11 @@ android {
     dependenciesInfo {
         includeInApk = true
         includeInBundle = true
+    }
+    // 16 KB page 设备要求 .so 不压缩并按 16 KB 对齐；NDK 30 的 64 位产物
+    // 已经默认按 0x4000 对齐，这里保证 APK 打包方式不把 .so 压回普通 zip 条目。
+    packaging {
+        jniLibs.useLegacyPackaging = false
     }
 }
 
@@ -153,7 +175,14 @@ dependencies {
         implementation(files("libs/caaccel.jar"))
     }
 
-    implementation(project(":pews-api"))
+    if (pewsAvailable) {
+        implementation(files("libs/pews-api.jar"))
+        implementation(libs.gson)
+    }
+
+    if (chelperAvailable) {
+        implementation(files("libs/chelper-core.aar"))
+    }
 
     implementation(libs.androidx.annotation)
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
