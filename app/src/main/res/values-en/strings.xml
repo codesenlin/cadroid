@@ -7,6 +7,8 @@
     <string name="edited_name">Edit command</string>
     <string name="default_loading_tip">Loading script engine</string>
     <string name="skip_ad_text">Skip ad</string>
-    <string name="ad_seconds_left">%d seconds until the ad ends</string>
-
+    <plurals name="ad_seconds_left">
+        <item quantity="one">%d second until the ad ends</item>
+        <item quantity="other">%d seconds until the ad ends</item>
+    </plurals>
 </resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 系统深色模式：原生窗口/状态栏使用深色底，CA UI 由界面主题跟随。 -->
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+    <style name="AppTheme.Translucent" parent="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
+</resources>

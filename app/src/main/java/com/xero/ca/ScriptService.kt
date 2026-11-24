@@ -6,9 +6,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.text.TextUtils
 
 import com.xero.ca.gen.Secret
@@ -19,6 +22,27 @@ import java.lang.ref.WeakReference
 class ScriptService : Service() {
     private var mManager: ScriptManager? = null
     private var mLastIntent: Intent? = null
+
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private var lastNightMode: Boolean? = null
+    private val uiModePoller = object : Runnable {
+        override fun run() {
+            val night = (resources.configuration.uiMode and
+                Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            if (lastNightMode != null && lastNightMode != night) {
+                mManager?.getScriptInterface()?.onSystemUiModeChanged()
+            }
+            lastNightMode = night
+            uiHandler.postDelayed(this, 1500)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        lastNightMode = (resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        uiHandler.postDelayed(uiModePoller, 1500)
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (sInstance != null) {
@@ -61,6 +85,7 @@ class ScriptService : Service() {
     }
 
     override fun onDestroy() {
+        uiHandler.removeCallbacks(uiModePoller)
         mManager?.endScript()
         sInstance = null
         super.onDestroy()

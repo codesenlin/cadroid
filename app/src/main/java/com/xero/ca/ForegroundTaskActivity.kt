@@ -3,9 +3,12 @@ package com.xero.ca
 import android.app.Activity
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.view.KeyEvent
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 
 import com.xero.ca.script.ScriptObject
 
@@ -16,6 +19,7 @@ import com.xero.ca.script.ScriptObject
 class ForegroundTaskActivity : Activity() {
     private var mDelegee: Delegee? = null
     private var mModal = false
+    private var mBackCallback: OnBackInvokedCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ScriptInterface.onBeginForegroundTask(this, intent)
@@ -23,6 +27,14 @@ class ForegroundTaskActivity : Activity() {
             Handler().post { finish() }
         }
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val callback = OnBackInvokedCallback {
+                if (!mModal) finish()
+            }
+            mBackCallback = callback
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -64,6 +76,11 @@ class ForegroundTaskActivity : Activity() {
     }
 
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            mBackCallback?.let {
+                onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it)
+            }
+        }
         mDelegee?.onDestroy(this)
         super.onDestroy()
     }

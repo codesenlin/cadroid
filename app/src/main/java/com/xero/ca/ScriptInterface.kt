@@ -7,10 +7,13 @@ import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
+import android.os.Looper
 import android.os.Message
 import android.util.Log
 import android.view.KeyEvent
+import android.view.View
 
+import com.xero.ca.api.NativeCapabilities
 import com.xero.ca.gen.Secret
 import com.xero.ca.script.AnalyticsPlatform
 import com.xero.ca.script.CHelperBridge
@@ -36,6 +39,7 @@ class ScriptInterface(manager: ScriptManager) {
     private val mManager: ScriptManager = manager
     private val mContext = manager.getBindContext()!!
     private var mBindActivity: SplashActivity? = null
+    private var mBindLandingActivity: LandingActivity? = null
     private var mBindService: ScriptService? = null
     private val mUiThread: Thread
     private val mUiHandler: Handler
@@ -130,6 +134,7 @@ class ScriptInterface(manager: ScriptManager) {
     fun quit() {
         mBindService?.stopSelf()
         mBindActivity?.finishAndRemoveTask()
+        mBindLandingActivity?.finishAndRemoveTask()
     }
 
     fun checkSelfPermission(permission: String): Int =
@@ -174,6 +179,20 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun isJavaClassAvailable(name: String): Boolean = try {
         Class.forName(name) != null
+    } catch (t: Throwable) {
+        false
+    }
+
+    fun onSystemUiModeChanged() {
+        try {
+            ScriptManager.getInstance().callScriptHook("onSystemUiModeChanged", arrayOf())
+        } catch (t: Throwable) {
+            // 脚本尚未加载或已结束时无需处理
+        }
+    }
+
+    fun isSystemDarkMode(): Boolean = try {
+        NativeCapabilities.isSystemDarkMode(mContext)
     } catch (t: Throwable) {
         false
     }
@@ -282,6 +301,27 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun isOnlineMode(): Boolean = mOnlineMode
 
+    fun createPhotoPickerIntent(): Intent? = NativeCapabilities.photoPickerIntent()
+
+    fun registerBackInvoked(view: View) {
+        NativeCapabilities.registerBackCallback(view) { mBridge?.onOverlayBack() }
+    }
+
+    fun finishLanding() {
+        mBindLandingActivity?.finish()
+        mBindLandingActivity = null
+    }
+
+    fun showLanding() {
+        // 首次启动的 Splash 任务不能留在后台，否则返回桌面后再点图标会把它拉回来。
+        mBindActivity?.finishAndRemoveTask()
+        mContext.startActivity(
+            Intent(mContext, LandingActivity::class.java)
+                // 独立任务，返回时只退到后台，不销毁页面；再次点图标复用同一任务。
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+
     fun getOfflineReason(): String? = mOfflineReason
 
     fun onScriptReady() {
@@ -344,6 +384,13 @@ class ScriptInterface(manager: ScriptManager) {
         fun onBeginPermissionRequest(activity: PermissionRequestActivity)
 
         fun onNewIntent(intent: Intent)
+
+        fun onSplashActivityReady(activity: SplashActivity)
+        fun onLandingActivityReady(activity: LandingActivity)
+
+        fun onExitRequested()
+
+        fun onOverlayBack()
 
         fun onKeyEvent(event: KeyEvent)
 
@@ -409,6 +456,7 @@ class ScriptInterface(manager: ScriptManager) {
         const val ACTION_SCRIPT_ACTION = "com.xero.ca.ACTION_SCRIPT_ACTION"
         const val ACTION_URI_ACTION = "com.xero.ca.ACTION_URI_ACTION"
         const val ACTION_DEBUG_EXEC = "com.xero.ca.DEBUG_EXEC"
+        const val EXTRA_SHOW_LANDING = "com.xero.ca.SHOW_LANDING"
 
         @JvmStatic
         fun getInstance(): ScriptInterface? =
@@ -449,6 +497,36 @@ class ScriptInterface(manager: ScriptManager) {
         @JvmStatic
         fun onSplashActivityDestroy(activity: SplashActivity) {
             getInstance()?.mBindActivity = null
+        }
+
+        @JvmStatic
+        fun requestExit() {
+            val instance = getInstance() ?: return
+            instance.mBridge?.onExitRequested()
+            // 脚本的 unload/quit 是异步的；兜底保证服务与落地页一定退出。
+            Handler(Looper.getMainLooper()).postDelayed({
+                instance.quit()
+            }, 600)
+        }
+
+        @JvmStatic
+        fun onLandingActivityCreate(activity: LandingActivity) {
+            getInstance()?.mBindLandingActivity = activity
+        }
+
+        @JvmStatic
+        fun onLandingActivityDestroy(activity: LandingActivity) {
+            getInstance()?.mBindLandingActivity = null
+        }
+
+        @JvmStatic
+        fun onLandingActivityReady(activity: LandingActivity) {
+            getInstance()?.mBridge?.onLandingActivityReady(activity)
+        }
+
+        @JvmStatic
+        fun onSplashActivityReady(activity: SplashActivity) {
+            getInstance()?.mBridge?.onSplashActivityReady(activity)
         }
 
         @JvmStatic
