@@ -16,6 +16,8 @@
 * 支持特殊 Intent 调用
 * 支持适配器
 * 支持开机自启
+* 跟随 Android 系统深色模式
+* 支持 Android 13+ 预测性返回手势
 
 ### 相关仓库
 
@@ -75,8 +77,8 @@ foojay-resolver，缺了会自动下载（Android Studio 用的是它自带的 J
 
 ## 本地依赖（可选）
 
-工程**不依赖任何本地文件即可构建**：缺少的统计/广告 SDK 会被自动跳过，对应功能关闭。
-下面两个 SDK 需要自己下载，放进 `app/libs/`（该目录不入库）。
+工程**不依赖任何本地文件即可构建**：缺少的统计/广告 SDK 与扩展会被自动跳过，对应功能关闭。
+下面这些本地组件需要自己准备，放进 `app/libs/`（该目录不入库）。
 
 ### TalkingData（统计）
 
@@ -100,6 +102,50 @@ foojay-resolver，缺了会自动下载（Android Studio 用的是它自带的 J
 > 补充：优量汇的**广告 SDK 本体**走 Maven（`com.qq.e.union:union`），不用手动放。广告 SDK 与
 > 转化 SDK 是**成套加载**的——本地没有这个 aar 时两个都不加载（`BuildConfig.GDT_ENABLED=false`，
 > 不请求广告），避免出现「投放广告但缺转化回传」的半套状态。
+
+### PEWS-API（WebSocket 协议，可选）
+
+CA 仓库的扩展构建产物：
+
+```text
+CA/build/extensions/pews-api/pews-api.jar
+```
+
+复制到：
+
+```text
+app/libs/pews-api.jar
+```
+
+普通 jar 不会自动带依赖，还需要在 `app/build.gradle.kts` 里保留：
+
+```kotlin
+if (pewsAvailable) {
+    implementation(files("libs/pews-api.jar"))
+    implementation(libs.gson)
+}
+implementation(libs.java.websocket)
+```
+
+详细依赖见 CA 的
+[extensions/pews-api/MANUAL-DEPS.md](https://github.com/codesenlin/CA/blob/canary/extensions/pews-api/MANUAL-DEPS.md)。
+
+### CHelper 解析内核（可选）
+
+CA 仓库的扩展构建产物：
+
+```text
+CA/extensions/chelper/compose/build/outputs/aar/chelper-aar-release.aar
+```
+
+复制到：
+
+```text
+app/libs/chelper-core.aar
+```
+
+AAR 自带 Kotlin 绑定与 arm64-v8a / armeabi-v7a / x86 / x86_64 / riscv64 的
+`libCHelperAndroid.so`，存在时自动集成，缺失时使用 `app/src/stub/chelper`。
 
 ## 账号/密钥（逐条合并：local > standard > template）
 
@@ -159,3 +205,7 @@ Secret 配置（逐条合并）:
 | [docs/quickjs-sidecar.md](docs/quickjs-sidecar.md)                   | **为什么 QuickJS 只做侧载**、前后性能对比、给后来者的验证清单 |
 | [docs/migration-kotlin-quickjs.md](docs/migration-kotlin-quickjs.md) | Kotlin 化 + JS 引擎迁移的完整过程记录（E0-E2.17）             |
 | [docs/apk-build.md](docs/apk-build.md)                               | APK 构建、签名、AAB/16KB 等打包相关说明                       |
+| [docs/android-native-features.md](docs/android-native-features.md)       | Android 原生能力清单：预测性返回、照片选择器、16 KB、targetSdk 策略 |
+| [docs/native-api.md](docs/native-api.md)                             | cadroid 原生能力 API：预测性返回、悬浮窗权限、照片选择器      |
+
+
