@@ -80,7 +80,7 @@ android {
     defaultConfig {
         applicationId = "com.xero.ca"
         minSdk = 21
-        targetSdk = 33
+        targetSdk = 34
         versionCode = appVersionCode
         versionName = appVersionName
         buildConfigField("int", "SHELL_VERSION", "26")
