@@ -42,6 +42,8 @@ class XApplication : Application() {
                 }
             }
         }
+        FairMemoryAdapter.initialize(this)
+
         // 记下系统原来的处理器，崩溃时先自己上报，再交还给它
         Thread.setDefaultUncaughtExceptionHandler(
             ErrorCatcher(Thread.getDefaultUncaughtExceptionHandler())
