@@ -11,6 +11,8 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.core.splashscreen.SplashScreen
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : Activity() {
@@ -18,12 +20,15 @@ class SplashActivity : Activity() {
     private lateinit var mAdContainer: FrameLayout
     private lateinit var mAdSkipView: TextView
     private lateinit var mAdSecondsView: TextView
-    private var mProvider: AdProvider? = null
+    private lateinit var mProvider: AdProvider
     private var mBackCallback: OnBackInvokedCallback? = null
-    private var mLandingOnly = false
+    private var mSplashDismissed = false
+    private var mSplashScreen: SplashScreen? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        mLandingOnly = intent?.getBooleanExtra(ScriptInterface.EXTRA_SHOW_LANDING, false) == true
+        val splash = installSplashScreen()
+        mSplashScreen = splash
+        splash.setKeepOnScreenCondition { !mSplashDismissed }
         setContentView(R.layout.main)
         mLoadingTitleView = findViewById(R.id.loadingTitle)
         mAdContainer = findViewById(R.id.adContainer)
@@ -36,31 +41,22 @@ class SplashActivity : Activity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val callback = OnBackInvokedCallback {
-                if (mLandingOnly || (mProvider?.isCompleted() ?: true)) finish()
+                if (mProvider.isCompleted()) finish()
             }
             mBackCallback = callback
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
                 OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
         }
-        if (mLandingOnly) {
-            // 服务已在运行时从桌面进入：直接显示模式/权限落地页，不初始化广告和启动加载。
-            ScriptInterface.onSplashActivityReady(this)
-            return
-        }
         val provider = AdProvider.getInstance()
         mProvider = provider
         provider.prepare(this, mAdContainer, mAdSkipView, AdListener())
-    }
-
-    override fun onNewIntent(intent: android.content.Intent?) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        if (intent?.getBooleanExtra(ScriptInterface.EXTRA_SHOW_LANDING, false) == true) {
-            mLandingOnly = true
-            mProvider?.release()
-            mProvider = null
-            ScriptInterface.onSplashActivityReady(this)
-        }
+        // 没有广告/广告失败时 prepare 会直接完成；确保系统启动图能收起。
+        provider.runAfterComplete(object : AdProvider.OnCompleteListener {
+            override fun onComplete(provider: AdProvider, success: Boolean, message: String?) {
+                mSplashDismissed = true
+                mSplashScreen?.setKeepOnScreenCondition { false }
+            }
+        })
     }
 
     override fun onDestroy() {
@@ -70,7 +66,7 @@ class SplashActivity : Activity() {
             }
         }
         ScriptInterface.onSplashActivityDestroy(this)
-        mProvider?.release()
+        if (::mProvider.isInitialized) mProvider.release()
         super.onDestroy()
     }
 
@@ -79,18 +75,17 @@ class SplashActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (mLandingOnly || mProvider == null) return super.onKeyDown(keyCode, event)
-        return !(mProvider?.isCompleted() ?: true) &&
+        return !mProvider.isCompleted() &&
                 (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_HOME) || super.onKeyDown(keyCode, event)
     }
 
     override fun onPause() {
-        mProvider?.pause()
+        mProvider.pause()
         super.onPause()
     }
 
     override fun onResume() {
-        mProvider?.resume()
+        mProvider.resume()
         super.onResume()
     }
 
@@ -106,6 +101,8 @@ class SplashActivity : Activity() {
 
     internal inner class AdListener : AdProvider.Listener {
         override fun onPresent() {
+            mSplashDismissed = true
+            mSplashScreen?.setKeepOnScreenCondition { false }
             mAdSecondsView.visibility = View.VISIBLE
             // 新版优量汇 SDK 会在 adContainer 内自行绘制带倒计时的“跳过”按钮，
             // 布局里的 skipView 不再交给 SDK，保持隐藏即可
@@ -118,6 +115,8 @@ class SplashActivity : Activity() {
         }
 
         override fun onComplete() {
+            mSplashDismissed = true
+            mSplashScreen?.setKeepOnScreenCondition { false }
             mAdContainer.visibility = View.GONE
             mAdSecondsView.visibility = View.GONE
             mAdSkipView.visibility = View.GONE

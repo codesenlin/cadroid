@@ -107,8 +107,8 @@ class ScriptService : Service() {
             intentFlags = intentFlags or PendingIntent.FLAG_IMMUTABLE
         }
         return createNotificationBuilder()
-            .setContentTitle("命令助手")
-            .setContentText("正在运行中...")
+            .setContentTitle(getString(R.string.script_service_title))
+            .setContentText(getString(R.string.script_service_text))
             .setSmallIcon(R.mipmap.icon_small)
             .setLargeIcon(BitmapFactory.decodeResource(resources, R.mipmap.icon_small))
             .setContentIntent(
@@ -126,8 +126,12 @@ class ScriptService : Service() {
     @Suppress("DEPRECATION")
     private fun createNotificationBuilder(): Notification.Builder {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(DEFAULT_CHANNEL, "保持活跃", NotificationManager.IMPORTANCE_DEFAULT)
-            channel.description = "快速管理命令助手"
+            val channel = NotificationChannel(
+                  DEFAULT_CHANNEL,
+                  getString(R.string.script_service_channel_name),
+                  NotificationManager.IMPORTANCE_DEFAULT
+              )
+            channel.description = getString(R.string.script_service_channel_desc)
             val nm = getSystemService(NotificationManager::class.java)
             nm?.createNotificationChannel(channel)
             Notification.Builder(this, DEFAULT_CHANNEL)

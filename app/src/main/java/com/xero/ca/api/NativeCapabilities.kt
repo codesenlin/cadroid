@@ -1,14 +1,28 @@
 package com.xero.ca.api
 
+import android.Manifest
+import android.app.LocaleManager
 import android.content.Context
+import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.os.LocaleList
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.View
+import android.webkit.WebSettings
+import android.webkit.WebView
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import java.io.File
+import java.io.FileOutputStream
 import java.util.WeakHashMap
 
 /**
@@ -69,15 +83,138 @@ object NativeCapabilities {
         }
     }
 
-    fun unregisterBackCallback(view: View) {
-        if (!isPredictiveBackSupported()) return
-        val entry = backCallbacks.remove(view) ?: return
-        try {
-            @Suppress("UNCHECKED_CAST")
-            val dispatcher = entry.first as OnBackInvokedDispatcher
-            dispatcher.unregisterOnBackInvokedCallback(entry.second)
+    /** Android 12+ 的系统强调色；低版本返回蓝色兜底。 */
+    fun systemAccentColor(context: Context): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                return context.getColor(android.R.color.system_accent1_500)
+            } catch (t: Throwable) {
+                // 某些精简系统没有动态色资源，走兜底。
+            }
+        }
+        return 0xFF4A7CB5.toInt()
+    }
+
+    /** Android 13+ 的应用级语言；返回逗号分隔的 BCP 47 标签，空串表示跟随系统。 */
+    fun applicationLocales(context: Context): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return ""
+        return try {
+            val manager = context.getSystemService(LocaleManager::class.java) ?: return ""
+            manager.applicationLocales.toLanguageTags()
         } catch (t: Throwable) {
-            // 窗口已经销毁时 dispatcher 可能已解绑，忽略即可。
+            ""
+        }
+    }
+
+    fun setApplicationLocales(context: Context, languageTags: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+        return try {
+            val manager = context.getSystemService(LocaleManager::class.java) ?: return false
+            manager.applicationLocales = if (languageTags.isBlank()) {
+                LocaleList.getEmptyLocaleList()
+            } else {
+                LocaleList.forLanguageTags(languageTags)
+            }
+            true
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
+    /** Android 13 的运行时通知权限 + 通知渠道总开关。 */
+    fun areNotificationsEnabled(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    fun notificationSettingsIntent(context: Context): Intent =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        } else {
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${context.packageName}")
+            )
+        }
+
+    /**
+     * 保存图片到系统相册。
+     *
+     * API 29+ 走 MediaStore，不依赖 WRITE_EXTERNAL_STORAGE；
+     * 低版本回退到公共 Pictures 目录并通知媒体扫描。
+     */
+    fun saveBitmapToPictures(context: Context, bitmap: Bitmap, displayName: String): String? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveBitmapViaMediaStore(context, bitmap, displayName)
+            } else {
+                saveBitmapToPublicPictures(context, bitmap, displayName)
+            }
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    private fun saveBitmapViaMediaStore(
+        context: Context, bitmap: Bitmap, displayName: String
+    ): String? {
+        val resolver = context.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            ?: return null
+        try {
+            resolver.openOutputStream(uri)?.use { out ->
+                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+                    throw IllegalStateException("compress failed")
+                }
+            } ?: throw IllegalStateException("openOutputStream failed")
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            return uri.toString()
+        } catch (t: Throwable) {
+            try { resolver.delete(uri, null, null) } catch (_: Throwable) {}
+            throw t
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun saveBitmapToPublicPictures(
+        context: Context, bitmap: Bitmap, displayName: String
+    ): String? {
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+        if (!dir.exists() && !dir.mkdirs()) return null
+        val file = File(dir, displayName)
+        FileOutputStream(file).use { out ->
+            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) return null
+        }
+        MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/png"), null)
+        return file.absolutePath
+    }
+
+    /** 让脚本创建的 WebView 跟随系统深色模式。 */
+    fun configureWebView(webView: WebView) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                webView.settings.isAlgorithmicDarkeningAllowed = true
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                @Suppress("DEPRECATION")
+                webView.settings.forceDark = WebSettings.FORCE_DARK_AUTO
+            }
+        } catch (t: Throwable) {
+            // WebView provider 异常时保持默认主题。
         }
     }
 

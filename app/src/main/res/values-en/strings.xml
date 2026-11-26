@@ -11,4 +11,23 @@
         <item quantity="one">%d second until the ad ends</item>
         <item quantity="other">%d seconds until the ad ends</item>
     </plurals>
+
+    <string name="landing_mode_float">Current mode: floating window\nYou can find the Command Assistant overlay on screen. If not, open the overlay permission manually.</string>
+    <string name="landing_mode_page">Current mode: page mode\nThe Command Assistant does not have overlay permission. Grant it and restart the app to use floating mode.</string>
+    <string name="landing_check_overlay">Check overlay permission</string>
+    <string name="landing_exit">Exit Command Assistant</string>
+    <string name="landing_overlay_granted">Overlay permission is enabled</string>
+    <string name="landing_overlay_settings_failed">Unable to open overlay permission settings</string>
+    <string name="script_service_channel_name">Keep active</string>
+    <string name="script_service_channel_desc">Quickly manage Command Assistant</string>
+    <string name="script_service_title">Command Assistant</string>
+    <string name="script_service_text">Running…</string>
+    <string name="game_bridge_channel_name">Open Command Assistant</string>
+    <string name="game_bridge_title">Command Assistant</string>
+    <string name="game_bridge_text">Game connected. Tap to open Command Assistant.</string>
+    <string name="bug_report_title">Error</string>
+    <string name="bug_report_message">Command Assistant encountered an error. You can report it to help improve the app, or ignore it. Contact: QQ-2687587184; Email-projectxero@163.com\n\nError:\n%1$s</string>
+    <string name="bug_report_copy_close">Copy and close</string>
+    <string name="bug_report_ignore">Ignore</string>
+    <string name="bug_report_stop">Stop now</string>
 </resources>

@@ -13,6 +13,7 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.xero.ca.api.NativeCapabilities
 
 /**
  * 脚本可用的 WebView：把 WebChromeClient / WebViewClient / DownloadListener
@@ -24,6 +25,9 @@ class RhinoWebView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : WebView(context, attrs, defStyleAttr) {
+    init {
+        NativeCapabilities.configureWebView(this)
+    }
 
     fun setDelegee(delegee: Delegee?): RhinoWebView {
         requireNotNull(delegee) { "Delegee can't be null" }

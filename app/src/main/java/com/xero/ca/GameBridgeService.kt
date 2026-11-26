@@ -6,13 +6,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import com.xero.ca.api.NativeCapabilities
 
 import java.lang.ref.WeakReference
 import java.util.Collections
@@ -69,12 +69,8 @@ class GameBridgeService : Service(), Handler.Callback {
 
     /** Android 11+：发一条「点按打开命令助手」的通知 */
     private fun postOpenNotification() {
-        // Android 13+ 需要运行时通知权限，没有就静默跳过
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
+        // 运行时权限或通知总开关关闭时静默跳过
+        if (!NativeCapabilities.areNotificationsEnabled(this)) return
         val manager = getSystemService(NOTIFICATION_SERVICE) as? NotificationManager ?: return
         var flags = PendingIntent.FLAG_UPDATE_CURRENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags = flags or PendingIntent.FLAG_IMMUTABLE
@@ -87,14 +83,18 @@ class GameBridgeService : Service(), Handler.Callback {
         } else {
             Notification.Builder(this)
         }
-        builder.setContentTitle("命令助手")
-            .setContentText("游戏已连接，点按打开命令助手")
+        builder.setContentTitle(getString(R.string.game_bridge_title))
+            .setContentText(getString(R.string.game_bridge_text))
             .setSmallIcon(R.mipmap.icon_small)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_OPEN, "打开命令助手", NotificationManager.IMPORTANCE_DEFAULT)
+                  NotificationChannel(
+                      CHANNEL_OPEN,
+                      getString(R.string.game_bridge_channel_name),
+                      NotificationManager.IMPORTANCE_DEFAULT
+                  )
             )
         }
         try {

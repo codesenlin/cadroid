@@ -3,6 +3,7 @@ package com.xero.ca
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.os.Build
@@ -301,6 +302,37 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun isOnlineMode(): Boolean = mOnlineMode
 
+    fun areNotificationsEnabled(): Boolean =
+        NativeCapabilities.areNotificationsEnabled(mContext)
+
+    fun openNotificationSettings(): Boolean = try {
+        mContext.startActivity(
+            NativeCapabilities.notificationSettingsIntent(mContext)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        true
+    } catch (t: Throwable) {
+        false
+    }
+
+    fun isDynamicColorSupported(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    fun getSystemAccentColor(): Int = NativeCapabilities.systemAccentColor(mContext)
+
+    fun canDrawOverlays(): Boolean = NativeCapabilities.canDrawOverlays(mContext)
+
+    fun isPerAppLanguageSupported(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
+    fun getApplicationLocales(): String = NativeCapabilities.applicationLocales(mContext)
+
+    fun setApplicationLocales(languageTags: String): Boolean =
+        NativeCapabilities.setApplicationLocales(mContext, languageTags)
+
+    fun saveImageToPictures(bitmap: Bitmap, displayName: String): String? =
+        NativeCapabilities.saveBitmapToPictures(mContext, bitmap, displayName)
+
     fun createPhotoPickerIntent(): Intent? = NativeCapabilities.photoPickerIntent()
 
     fun registerBackInvoked(view: View) {
@@ -385,7 +417,6 @@ class ScriptInterface(manager: ScriptManager) {
 
         fun onNewIntent(intent: Intent)
 
-        fun onSplashActivityReady(activity: SplashActivity)
         fun onLandingActivityReady(activity: LandingActivity)
 
         fun onExitRequested()
@@ -456,7 +487,6 @@ class ScriptInterface(manager: ScriptManager) {
         const val ACTION_SCRIPT_ACTION = "com.xero.ca.ACTION_SCRIPT_ACTION"
         const val ACTION_URI_ACTION = "com.xero.ca.ACTION_URI_ACTION"
         const val ACTION_DEBUG_EXEC = "com.xero.ca.DEBUG_EXEC"
-        const val EXTRA_SHOW_LANDING = "com.xero.ca.SHOW_LANDING"
 
         @JvmStatic
         fun getInstance(): ScriptInterface? =
@@ -522,11 +552,6 @@ class ScriptInterface(manager: ScriptManager) {
         @JvmStatic
         fun onLandingActivityReady(activity: LandingActivity) {
             getInstance()?.mBridge?.onLandingActivityReady(activity)
-        }
-
-        @JvmStatic
-        fun onSplashActivityReady(activity: SplashActivity) {
-            getInstance()?.mBridge?.onSplashActivityReady(activity)
         }
 
         @JvmStatic

@@ -43,11 +43,11 @@ class LandingActivity : Activity() {
         }
         layout.addView(mHelp)
         layout.addView(Button(this).apply {
-            text = "检查悬浮窗权限"
+            text = getString(R.string.landing_check_overlay)
             setOnClickListener { checkOverlayPermission() }
         }, LinearLayout.LayoutParams(-1, -2))
         layout.addView(Button(this).apply {
-            text = "退出命令助手"
+            text = getString(R.string.landing_exit)
             setOnClickListener {
                 ScriptInterface.requestExit()
             }
@@ -86,17 +86,15 @@ class LandingActivity : Activity() {
     private fun canFloat(): Boolean = NativeCapabilities.canDrawOverlays(this)
 
     private fun updateModeText() {
-        mHelp.text = if (canFloat()) {
-            "当前模式：悬浮窗模式\n您现在可以在屏幕上找到命令助手的悬浮窗，找不到的话请手动打开命令助手的悬浮窗权限"
-        } else {
-            "当前模式：页面模式\n检测到命令助手没有悬浮窗权限，无法以悬浮窗模式打开命令助手。如果您已给予权限，请手动重启命令助手。"
-        }
+        mHelp.text = getString(
+            if (canFloat()) R.string.landing_mode_float else R.string.landing_mode_page
+        )
     }
 
     private fun checkOverlayPermission() {
         if (canFloat()) {
             updateModeText()
-            Toast.makeText(this, "悬浮窗权限已开启", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.landing_overlay_granted, Toast.LENGTH_SHORT).show()
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -110,7 +108,7 @@ class LandingActivity : Activity() {
                             "package:$packageName".toUri())
                     )
                 } catch (e2: Exception) {
-                    Toast.makeText(this, "无法打开悬浮窗权限设置", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.landing_overlay_settings_failed, Toast.LENGTH_SHORT).show()
                 }
             }
         }

@@ -16,22 +16,20 @@ class BugReportActivity : Activity() {
         val ex = intent?.extras ?: return
         val em = ex.getString("exception", "") ?: ""
         AlertDialog.Builder(this)
-            .setTitle("错误")
+            .setTitle(R.string.bug_report_title)
             .setCancelable(false)
             .setMessage(
-                "您好，命令助手出现了一个错误。您可以将这个错误反馈给我们，来推动命令助手的更新。您也可以选择忽略。" +
-                    "作者联系方式：QQ-2687587184;Email-projectxero@163.com\n\n" +
-                    "错误信息：\n" + em
+                  getString(R.string.bug_report_message, em)
             )
-            .setPositiveButton("复制并关闭") { _, _ ->
+            .setPositiveButton(R.string.bug_report_copy_close) { _, _ ->
                 setClipText(em)
                 finish()
             }
-            .setNegativeButton("忽略") { _, _ -> finish() }
+            .setNegativeButton(R.string.bug_report_ignore) { _, _ -> finish() }
             .apply {
                 val pied = ex.getInt("pid", 0)
                 if (pied != 0) {
-                    setNeutralButton("立即停止") { _, _ ->
+                    setNeutralButton(R.string.bug_report_stop) { _, _ ->
                         finish()
                         android.os.Process.killProcess(pied)
                         exitProcess(0)

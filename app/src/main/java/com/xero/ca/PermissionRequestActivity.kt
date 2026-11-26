@@ -1,17 +1,23 @@
 package com.xero.ca
 
 import android.annotation.SuppressLint
-import android.app.Activity
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import com.xero.ca.script.ScriptObject
 
-class PermissionRequestActivity : Activity() {
+class PermissionRequestActivity : ComponentActivity() {
     private var mCallback: Callback? = null
     private var mBackCallback: OnBackInvokedCallback? = null
+    private lateinit var mLauncher: ActivityResultLauncher<Array<String>>
+    private var mPendingRequestCode = 0
+    private var mPendingPermissions: Array<String> = emptyArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ScriptInterface.onBeginPermissionRequest(this)
@@ -19,6 +25,21 @@ class PermissionRequestActivity : Activity() {
             Handler().post { finish() }
         }
         super.onCreate(savedInstanceState)
+        mLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+            val permissions = mPendingPermissions
+            val grantResults = IntArray(permissions.size) { i ->
+                if (result[permissions[i]] == true) {
+                    PackageManager.PERMISSION_GRANTED
+                } else {
+                    PackageManager.PERMISSION_DENIED
+                }
+            }
+            mCallback?.onRequestPermissionsResult(
+                this, mPendingRequestCode, permissions, grantResults
+            )
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val callback = OnBackInvokedCallback { cancelAndFinish() }
             mBackCallback = callback
@@ -36,14 +57,6 @@ class PermissionRequestActivity : Activity() {
     private fun cancelAndFinish() {
         // onDestroy 会触发 onEndPermissionRequest，脚本层据此回调“用户取消”。
         finish()
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray,
-    ) {
-        mCallback?.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
     }
 
     override fun onDestroy() {
@@ -68,19 +81,18 @@ class PermissionRequestActivity : Activity() {
 
     @ScriptObject
     fun requestPermissionsCompat(requestCode: Int, permissions: Array<String>) {
+        mPendingRequestCode = requestCode
+        mPendingPermissions = permissions
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(permissions, requestCode)
+            mLauncher.launch(permissions)
         } else {
-            val handler = Handler(mainLooper)
-            handler.post {
-                val grantResults = IntArray(permissions.size)
-                val packageManager = packageManager
-                val pkgName = packageName
-                for (i in permissions.indices) {
-                    grantResults[i] = packageManager.checkPermission(permissions[i], pkgName)
-                }
-                onRequestPermissionsResult(requestCode, permissions, grantResults)
+            val grantResults = IntArray(permissions.size)
+            val packageManager = packageManager
+            val pkgName = packageName
+            for (i in permissions.indices) {
+                grantResults[i] = packageManager.checkPermission(permissions[i], pkgName)
             }
+            mCallback?.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
         }
     }
 
