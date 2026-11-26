@@ -21,6 +21,7 @@ app/src/main/java/com/xero/ca/api/NativeCapabilities.kt
 | `canDrawOverlays(context)` | 是否有悬浮窗权限 | API < 23 返回 `true` |
 | `overlayPermissionIntent(context)` | 打开悬浮窗权限页 | 回退应用详情页 |
 | `photoPickerIntent()` | 系统照片选择器 Intent | API < 33 返回 `null` |
+| `configureWebView(webView)` | WebView 跟随系统深色模式 | API < 29 不处理 |
 
 ## 预测性返回
 

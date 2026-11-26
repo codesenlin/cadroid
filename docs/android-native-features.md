@@ -79,6 +79,37 @@ CA/src/android/AndroidBridge.kt :: abSelectImage()
 
 当前状态：编译、安装通过；背景图片/图标入口仍需在真机上点选确认一次。
 
+### WebView 深色模式
+
+`NativeCapabilities.configureWebView()` 统一处理：
+
+```text
+API 33+   settings.isAlgorithmicDarkeningAllowed = true
+API 29-32 settings.forceDark = FORCE_DARK_AUTO
+```
+
+`RhinoWebView` 初始化时自动调用，网页没有自带深色样式时由系统反色。
+
+### SAF 文件选择
+
+普通文件选择和图片以外的导入入口已改为 Storage Access Framework：
+
+```text
+ACTION_OPEN_DOCUMENT
++ CATEGORY_OPENABLE
++ READ / PERSISTABLE URI 权限
+```
+
+直接读写 Minecraft 游戏目录的部分仍保留 `MANAGE_EXTERNAL_STORAGE`，因为需要稳定路径；
+用户主动选择的文件走 SAF，不再需要额外存储权限。
+
+没有全盘访问权限时，导入/打开/导出/保存菜单会隐藏「内置文件浏览器」选项，
+只保留系统文件选择器，并弹出一次提示：
+
+```text
+未开启所有文件访问，已使用系统文件选择器
+```
+
 ### 16 KB 页对齐
 
 `app/build.gradle.kts` 使用：
@@ -107,6 +138,21 @@ packaging {
 
 targetSdk 34 下启动前台服务不会因为缺少类型而抛异常。
 
+### 包可见性
+
+不再申请 `QUERY_ALL_PACKAGES`，改为 `<queries>` 声明启动器入口：
+
+```xml
+<queries>
+    <intent>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent>
+</queries>
+```
+
+Android/data 浏览改为直接读取目录，应用标签拿不到时回退显示包名。
+
 ### ShortcutManager
 
 快捷方式已经优先走 `ShortcutManager.requestPinShortcut()`，旧的
@@ -116,37 +162,69 @@ targetSdk 34 下启动前台服务不会因为缺少类型而抛异常。
 
 ### SplashScreen API
 
-Android 12+ 提供系统级启动画面，可以把冷启动时的空白/自定义 Splash 换成系统启动图。
+已接入，依赖：
 
-暂不直接替换的原因：
+```kotlin
+implementation("androidx.core:core-splashscreen:1.0.1")
+```
 
-- 当前启动流程包含广告加载、引擎初始化和“模式落地页”
-- 需要重新安排“系统启动图 → 广告 → 模式页/主界面”的时序
-- 直接套 `installSplashScreen()` 会让广告和 loading 的状态机变得不清楚
+`SplashActivity` 的顺序：
 
-建议后续单独做一轮启动流程改造，而不是只换一个主题。
+```text
+installSplashScreen()
+→ 自定义启动布局
+→ 广告加载
+```
+
+系统启动图会在以下任一时刻收起：
+
+- 广告开始展示（`onPresent`）
+- 广告结束/没有广告（`onComplete`）
+- `AdProvider` 完成（`runAfterComplete`）
+
+模式落地页（`EXTRA_SHOW_LANDING`）直接跳过广告，立即收起系统启动图。
 
 ### ActivityResultContracts
 
-当前文件选择、权限请求等通过 `ReturnDataActivity` 和桥接层手动转发结果。
-
-可以改成：
+`ReturnDataActivity` 已迁移到 Activity Result API：
 
 ```kotlin
-registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> ... }
+registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    ScriptInterface.onActivityResult(requestCode, result.resultCode, result.data)
+}
 ```
 
-暂不做的原因：
+它仍然作为 Service 侧发起带结果 Intent 的轻量宿主，但不再重写
+`onActivityResult()`，也不再依赖手写 requestCode 分支。桥接层和 CA 的
+`startActivityForResult` 调用方式保持不变。
 
-- 脚本层需要同步/异步桥接返回值
-- 替换会触及 `ScriptInterface`、`ReturnDataActivity` 和 CA 的 `AndroidBridge`
-- 现有实现虽然旧，但结果语义已经稳定
+权限请求也已迁移：
+
+```kotlin
+registerForActivityResult(
+    ActivityResultContracts.RequestMultiplePermissions()
+) { result -> ... }
+```
+
+`PermissionRequestActivity` 不再重写 `onRequestPermissionsResult()`；API 21-22
+仍走 `PackageManager.checkPermission` 的同步兜底。
+
+### 动态配色
+
+Android 12+ 的 `system_accent1_500` 通过 `NativeCapabilities.systemAccentColor()` 暴露给 CA；
+主题列表在支持动态色的设备上增加「动态配色」，用系统强调色替换高亮色和按钮色，
+背景保持中性浅色/深色。API 31 以下不显示该主题。
 
 ### LocaleManager / 应用级语言
 
-Android 13+ 支持 per-app language。当前 CA 的语言和字符串由 JS `Intl` 管理，原生侧只有少量广告/启动字符串。
+已接入 API 33+ 的 `LocaleManager`：
 
-优先级低：需要先决定原生资源和 JS 语言设置以哪边为准。
+```text
+设置 → 语言 → 跟随系统 / 简体中文 / English
+```
+
+CA 设置页调用 `ScriptInterface.setApplicationLocales()`，原生资源和 CA 的
+`Intl` 在下次启动时都会读取新的应用语言。
 
 ### Edge-to-edge / WindowInsets
 
@@ -180,5 +258,5 @@ targetSdk 35+ 会强制 edge-to-edge。当前 targetSdk 34 尚未触发，但升
 - [x] 16 KB page 配置
 - [x] 图片选择 Photo Picker 编译/安装
 - [ ] Photo Picker 真机点选背景图片
-- [ ] SplashScreen API 启动流程改造
+- [x] SplashScreen API 接入
 - [ ] targetSdk 35+ edge-to-edge 回归

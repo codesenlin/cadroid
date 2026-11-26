@@ -206,6 +206,8 @@ Secret 配置（逐条合并）:
 | [docs/migration-kotlin-quickjs.md](docs/migration-kotlin-quickjs.md) | Kotlin 化 + JS 引擎迁移的完整过程记录（E0-E2.17）             |
 | [docs/apk-build.md](docs/apk-build.md)                               | APK 构建、签名、AAB/16KB 等打包相关说明                       |
 | [docs/android-native-features.md](docs/android-native-features.md)       | Android 原生能力清单：预测性返回、照片选择器、16 KB、targetSdk 策略 |
+| [docs/fair-memory.md](docs/fair-memory.md)                         | ITGSA 公平运行内存机制客户端适配                            |
+
 | [docs/native-api.md](docs/native-api.md)                             | cadroid 原生能力 API：预测性返回、悬浮窗权限、照片选择器      |
 
 
