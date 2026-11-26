@@ -187,6 +187,8 @@ dependencies {
     implementation(libs.androidx.annotation)
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.splashscreen)
+    implementation(libs.androidx.activity.ktx)
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
     implementation(libs.dalvik.dx)
     implementation(libs.zip4j)

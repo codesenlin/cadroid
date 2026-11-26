@@ -1,6 +1,6 @@
 [versions]
 # 构建插件
-agp = "9.5.2"
+agp = "9.5.3"
 kotlin = "2.4.21"
 
 # 运行时依赖
@@ -8,6 +8,8 @@ desugar-jdk-libs = "2.1.5"
 androidx-annotation = "1.11.0"
 # 1.19.x 要求 minSdk 23；App 仍保持 minSdk 21，暂留 1.17.0
 androidx-core-ktx = "1.17.0"
+androidx-splashscreen = "1.0.1"
+androidx-activity-ktx = "1.13.0"
 dalvik-dx = "16.0.1"
 zip4j = "2.11.6"
 java-websocket = "1.6.0"
@@ -29,6 +31,8 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
+androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-splashscreen" }
+androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "androidx-activity-ktx" }
 dalvik-dx = { module = "com.jakewharton.android.repackaged:dalvik-dx", version.ref = "dalvik-dx" }
 zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
 java-websocket = { module = "org.java-websocket:Java-WebSocket", version.ref = "java-websocket" }
