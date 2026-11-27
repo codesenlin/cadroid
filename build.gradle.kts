@@ -60,6 +60,8 @@ allprojects {
 }
 
 tasks.register<Delete>("clean") {
+    description = "删除根构建目录"
+    group = "build"
     // Gradle 9 起 Project.buildDir 弃用，改用 layout.buildDirectory（Provider）
     delete(rootProject.layout.buildDirectory)
 }

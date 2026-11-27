@@ -183,16 +183,16 @@ dependencies {
     if (chelperAvailable) {
         implementation(files("libs/chelper-core.aar"))
     }
-
+    implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.annotation)
     // SharedPreferences.edit { } 等 KTX 扩展（Preference.kt 用到）
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.splashscreen)
-    implementation(libs.androidx.activity.ktx)
     // support-v4 之前引了但代码里没用到，迁 AndroidX 时直接去掉
     implementation(libs.dalvik.dx)
-    implementation(libs.zip4j)
     implementation(libs.java.websocket)
+    // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
+    implementation(libs.quickjs.kt.android)
     // Rhino 1.9.x 的优化器依赖 jdk.dynalink（JDK 专属模块），Android 上跑不了，
     // 这也是官方的 rhino-runtime 停在 1.7.15.1 的原因
     // 1.8+ 起 rhino-runtime 停更，只能换完整版 rhino
@@ -201,8 +201,7 @@ dependencies {
     implementation(libs.rhino.kotlin)
     // E4X（XML 字面量）支持：1.8 起从核心拆成独立模块，老脚本可能用到
     implementation(libs.rhino.xml)
-    // QuickJS 侧载加速 worker 的引擎绑定（16KB page 对齐的 .so，Apache-2.0）
-    implementation(libs.quickjs.kt.android)
+    implementation(libs.zip4j)
 }
 
 // 密钥/账号配置：三份候选文件（本机/默认/模板）逐条合并，逻辑在下方
@@ -289,6 +288,8 @@ if (secretMerged["getVerifyKey"].isNullOrEmpty()) {
 val secretGenFile = layout.buildDirectory.file("generated/source/secret/com/xero/ca/gen/Secret.kt")
 
 tasks.register("generateSecret") {
+    description = "合并本机/默认/模板配置并生成 Secret.kt"
+    group = "build"
     val stages = secretStages.map { it.second }.filter { it.exists() }
     inputs.files(stages)
     outputs.file(secretGenFile)
