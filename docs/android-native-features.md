@@ -52,7 +52,10 @@ dispatcher.registerOnBackInvokedCallback(
 `AndroidManifest.xml` 需要：
 
 ```xml
-<application android:enableOnBackInvokedCallback="true" ... />
+<application
+    android:enableOnBackInvokedCallback="true">
+    <!-- 其它配置 -->
+</application>
 ```
 
 ### 系统照片选择器
@@ -201,9 +204,11 @@ registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { re
 权限请求也已迁移：
 
 ```kotlin
-registerForActivityResult(
+val launcher = registerForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions()
-) { result -> ... }
+) { result ->
+    // 处理权限结果
+}
 ```
 
 `PermissionRequestActivity` 不再重写 `onRequestPermissionsResult()`；API 21-22

@@ -135,7 +135,7 @@ implementation(libs.java.websocket)
 CA 仓库的扩展构建产物：
 
 ```text
-CA/extensions/chelper/compose/build/outputs/aar/chelper-aar-release.aar
+CA/extensions/CHelper/Compose/build/outputs/aar/chelper-aar-release.aar
 ```
 
 复制到：
@@ -197,6 +197,7 @@ Secret 配置（逐条合并）:
 - [Rhino](https://github.com/mozilla/rhino) — Android 脚本引擎
 - [quickjs-kt](https://github.com/dokar3/quickjs-kt) — Android QuickJS 绑定，侧载加速 worker（Apache-2.0）
 - [Kotlin](https://github.com/JetBrains/kotlin) — Kotlin Multiplatform / Kotlin/JS
+- [CHelper](https://github.com/Yancey2023/CHelper) — 基岩版命令补全内核，cadroid 集成其 Android 绑定与 cpack 资源（GPL-3.0），感谢 Yancey2023 与上游贡献者
 
 ## 文档
 
@@ -207,7 +208,6 @@ Secret 配置（逐条合并）:
 | [docs/apk-build.md](docs/apk-build.md)                               | APK 构建、签名、AAB/16KB 等打包相关说明                       |
 | [docs/android-native-features.md](docs/android-native-features.md)       | Android 原生能力清单：预测性返回、照片选择器、16 KB、targetSdk 策略 |
 | [docs/fair-memory.md](docs/fair-memory.md)                         | ITGSA 公平运行内存机制客户端适配                            |
-
 | [docs/native-api.md](docs/native-api.md)                             | cadroid 原生能力 API：预测性返回、悬浮窗权限、照片选择器      |
 
 

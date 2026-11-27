@@ -19,6 +19,9 @@
 >
 > 另：`libquickjs.so` / `libturingad.so` 均为 **16KB page 对齐**（Android 15+ 16KB
 > 设备的要求），来源分别是 quickjs-kt 1.0.18 与优量汇 AAR。
+>
+> 2026-11-27：`app/src/main/assets/cpack` 新增多版本资源包（约 9.5 MB），上面的 APK
+> 体积和分体收益数据已经过时，需要重新测量后再更新。
 
 `bundletool get-size total --dimensions=ABI`：
 
