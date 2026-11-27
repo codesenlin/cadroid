@@ -24,6 +24,7 @@ import java.lang.ref.WeakReference
  * 开屏广告的封装。单例，启动页通过 prepare() 发起请求，
  * 结果通过 Listener / OnCompleteListener 回调；没配置广告位或首次启动时直接跳过。
  */
+@Suppress("SameParameterValue")
 class AdProvider {
     private val mADListener = ADListener()
     private val mHandler = Handler(Looper.getMainLooper())

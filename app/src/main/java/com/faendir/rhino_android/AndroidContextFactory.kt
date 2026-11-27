@@ -59,15 +59,12 @@ class AndroidContextFactory(private val cacheDirectory: File) : ContextFactory()
     override fun hasFeature(cx: Context, feature: Int): Boolean {
         // Rhino 1.9 的 ThreadSafe*SlotMap 内部用 VarHandle/MethodHandle（API 26+）。
         // 低版本关闭，避免走到 SlotMapOwner$ThreadedAccess。
-        if (feature == Context.FEATURE_THREAD_SAFE_OBJECTS) {
-            // Rhino 1.9 的 ThreadSafe*SlotMap 会通过 MethodHandles.lookup()
-            // 反射访问 SlotMapOwner 的 private slotMap；Android 14 的 ART 对这条
-            // nestmate 私有访问路径抛出 IllegalAccessException，导致启动时
-            // initStandardObjects 直接崩溃。CA 的脚本运行时是单线程入口，
-            // 关闭该特性即可避开 SlotMapOwner$ThreadedAccess。
-            return false
-        }
-        return super.hasFeature(cx, feature)
+        // Rhino 1.9 的 ThreadSafe*SlotMap 会通过 MethodHandles.lookup()
+        // 反射访问 SlotMapOwner 的 private slotMap；Android 14 的 ART 对这条
+        // nestmate 私有访问路径抛出 IllegalAccessException，导致启动时
+        // initStandardObjects 直接崩溃。CA 的脚本运行时是单线程入口，
+        // 关闭该特性即可避开 SlotMapOwner$ThreadedAccess。
+        return feature != Context.FEATURE_THREAD_SAFE_OBJECTS && super.hasFeature(cx, feature)
     }
 
     override fun onContextReleased(cx: Context) {

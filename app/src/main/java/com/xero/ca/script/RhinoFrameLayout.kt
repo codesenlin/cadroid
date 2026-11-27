@@ -85,6 +85,7 @@ class RhinoFrameLayout @JvmOverloads constructor(
         }
     }
 
+    @Suppress("SameReturnValue")
     private class DefaultCallback : Callback {
         override fun dispatchKeyEvent(event: KeyEvent, thisObj: RhinoFrameLayout): Int = RETURN_DEFAULT
         override fun dispatchTouchEvent(ev: MotionEvent, thisObj: RhinoFrameLayout): Int = RETURN_DEFAULT

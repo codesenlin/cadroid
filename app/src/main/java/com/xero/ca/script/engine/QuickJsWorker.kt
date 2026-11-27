@@ -44,7 +44,7 @@ object QuickJsWorker {
     @Volatile
     private var quickJs: QuickJs? = null
 
-    private val bootScript =
+    private const val bootScript =
         "function __quickCall(name, argsJson) {" +
             "  var f = globalThis[name];" +
             "  if (typeof f !== 'function') throw new Error('worker 函数不存在: ' + name);" +

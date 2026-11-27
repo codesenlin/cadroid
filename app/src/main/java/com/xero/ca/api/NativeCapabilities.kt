@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.util.WeakHashMap
+import androidx.core.net.toUri
 
 /**
  * cadroid 对 Android 原生能力的稳定封装。
@@ -44,20 +45,19 @@ object NativeCapabilities {
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     fun canDrawOverlays(context: Context): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(context)
-        else true
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
 
     /** 打开系统的悬浮窗权限页；极少数 OEM 没有该页面时回退到应用详情。 */
     fun overlayPermissionIntent(context: Context): Intent =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${context.packageName}")
+                "package:${context.packageName}".toUri()
             )
         } else {
             Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:${context.packageName}")
+                "package:${context.packageName}".toUri()
             )
         }
 
@@ -68,8 +68,7 @@ object NativeCapabilities {
      * API < 33 返回 false，调用方继续走普通 KeyEvent 路径。
      */
     fun registerBackCallback(view: View, onBack: () -> Unit): Boolean {
-        if (!isPredictiveBackSupported()) return false
-        return try {
+        return isPredictiveBackSupported() && try {
             val dispatcher = view.findOnBackInvokedDispatcher() ?: return false
             if (backCallbacks[view]?.first === dispatcher) return true
             val callback = OnBackInvokedCallback { onBack() }
@@ -107,8 +106,7 @@ object NativeCapabilities {
     }
 
     fun setApplicationLocales(context: Context, languageTags: String): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
-        return try {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && try {
             val manager = context.getSystemService(LocaleManager::class.java) ?: return false
             manager.applicationLocales = if (languageTags.isBlank()) {
                 LocaleList.getEmptyLocaleList()
@@ -123,14 +121,10 @@ object NativeCapabilities {
 
     /** Android 13 的运行时通知权限 + 通知渠道总开关。 */
     fun areNotificationsEnabled(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return false
-        }
-        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+        return !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED) && NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
     fun notificationSettingsIntent(context: Context): Intent =
@@ -140,7 +134,7 @@ object NativeCapabilities {
         } else {
             Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:${context.packageName}")
+                "package:${context.packageName}".toUri()
             )
         }
 

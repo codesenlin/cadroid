@@ -63,7 +63,7 @@ class LandingActivity : Activity() {
     }
 
     @SuppressLint("GestureBackNavigation")
-    @Deprecated("Deprecated in Java")
+    @Deprecated("Deprecated in Java", ReplaceWith("finish()"))
     override fun onBackPressed() {
         finish()
     }

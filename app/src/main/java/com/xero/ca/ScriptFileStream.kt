@@ -37,6 +37,7 @@ import java.util.zip.InflaterInputStream
  *
  * 为了兼容 v3 密钥轮换，打开时会挨个试候选密钥，第一个能通过 GZIP 头校验的即为正确密钥。
  */
+@Suppress("SameParameterValue")
 class ScriptFileStream private constructor(key: ByteArray?, stream: InputStream?) :
     GZIPInputStream(EncryptedInputStream(key, stream)) {
 

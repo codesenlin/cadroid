@@ -36,6 +36,7 @@ import java.net.URISyntaxException
  * 静态成员用 @JvmStatic、常量用 const val。
  */
 @ScriptObject
+@Suppress("SameReturnValue")
 class ScriptInterface(manager: ScriptManager) {
     private val mManager: ScriptManager = manager
     private val mContext = manager.getBindContext()!!
@@ -199,7 +200,7 @@ class ScriptInterface(manager: ScriptManager) {
     }
 
     fun getPrimaryAbi(): String = try {
-        android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: ""
+        Build.SUPPORTED_ABIS.firstOrNull() ?: ""
     } catch (t: Throwable) {
         ""
     }

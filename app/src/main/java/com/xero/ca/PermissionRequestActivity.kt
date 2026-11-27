@@ -51,6 +51,7 @@ class PermissionRequestActivity : ComponentActivity() {
     @SuppressLint("GestureBackNavigation")
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        super.onBackPressed()
         cancelAndFinish()
     }
 

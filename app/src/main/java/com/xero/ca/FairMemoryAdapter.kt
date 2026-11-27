@@ -13,6 +13,7 @@ import android.os.IBinder
 import android.os.Parcel
 import android.os.RemoteException
 import android.util.Log
+import androidx.core.content.ContextCompat
 import java.io.File
 
 /**
@@ -21,6 +22,7 @@ import java.io.File
  * 系统通过 itgsa.intent.action.TRIM / KILL 广播通知应用释放内存或保存现场，
  * 应用需要在 3 秒内通过广播里的 Binder 回调返回处理结果。
  */
+@Suppress("SameParameterValue")
 object FairMemoryAdapter {
     private const val TAG = "FairMemory"
     private const val ACTION_TRIM = "itgsa.intent.action.TRIM"
@@ -65,7 +67,14 @@ object FairMemoryAdapter {
                 appContext.registerReceiver(r, filter, null, handler, Context.RECEIVER_EXPORTED)
             } else {
                 @Suppress("DEPRECATION")
-                appContext.registerReceiver(r, filter, null, handler)
+                ContextCompat.registerReceiver(
+                    appContext,
+                    r,
+                    filter,
+                    null,
+                    handler,
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                )
             }
             Log.d(TAG, "Fair memory receiver registered")
         } catch (t: Throwable) {
