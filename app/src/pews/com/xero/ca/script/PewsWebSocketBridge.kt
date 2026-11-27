@@ -112,13 +112,13 @@ class PewsWebSocketBridge(port: Int, delegate: Listener?) :
         }
         val parsed = parser.parseCommand(if (command.startsWith("/")) command else "/$command") ?: return false
         val message = MCMessage(parsed)
-        callbacks[message.getHeader()!!.getRequestId()!!] = callbackId
+        callbacks[message.getHeader()!!.getRequestId()] = callbackId
         client.send(pewsListener, message)
         return true
     }
 
     private fun emitResponse(request: MCMessage, json: String) {
-        val id = callbacks.remove(request.getHeader()!!.getRequestId()!!) ?: return
+        val id = callbacks.remove(request.getHeader()!!.getRequestId()) ?: return
         listener.onResponse(id, json)
     }
 
