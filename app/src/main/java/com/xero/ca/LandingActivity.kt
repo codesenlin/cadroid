@@ -55,7 +55,7 @@ class LandingActivity : Activity() {
         setContentView(layout)
         updateModeText()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val callback = OnBackInvokedCallback { finish() }
+            val callback = OnBackInvokedCallback { goToDesktop() }
             mBackCallback = callback
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
                 OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback)
@@ -63,9 +63,14 @@ class LandingActivity : Activity() {
     }
 
     @SuppressLint("GestureBackNavigation")
-    @Deprecated("Deprecated in Java", ReplaceWith("finish()"))
+    @Deprecated("Deprecated in Java", ReplaceWith("goToDesktop()"))
     override fun onBackPressed() {
-        finish()
+        goToDesktop()
+    }
+
+    /** 权限页是页面模式的宿主，返回只退到后台，不能销毁它；否则页面内球的 Window 会失效。 */
+    private fun goToDesktop() {
+        moveTaskToBack(true)
     }
 
     override fun onDestroy() {
@@ -81,6 +86,13 @@ class LandingActivity : Activity() {
     override fun onResume() {
         super.onResume()
         updateModeText()
+        // 必须等 DecorView 真正挂上 WindowManager 后才有窗口 token；
+        // 页面模式的球是 TYPE_APPLICATION_PANEL，早于此时创建会直接 BadToken。
+        window.decorView.post {
+            if (!isFinishing && !isDestroyed) {
+                ScriptInterface.onLandingActivityReady(this)
+            }
+        }
     }
 
     private fun canFloat(): Boolean = NativeCapabilities.canDrawOverlays(this)

@@ -12,7 +12,7 @@
     </plurals>
 
     <string name="landing_mode_float">当前模式：悬浮窗模式\n您现在可以在屏幕上找到命令助手的悬浮窗，找不到的话请手动打开命令助手的悬浮窗权限</string>
-    <string name="landing_mode_page">当前模式：页面模式\n检测到命令助手没有悬浮窗权限，无法以悬浮窗模式打开命令助手。如果您已给予权限，请手动重启命令助手。</string>
+    <string name="landing_mode_page">当前模式：页面模式\n您可以直接在页面内使用命令助手。授予悬浮窗权限后，会自动切换到悬浮窗模式。</string>
     <string name="landing_check_overlay">检查悬浮窗权限</string>
     <string name="landing_exit">退出命令助手</string>
     <string name="landing_overlay_granted">悬浮窗权限已开启</string>

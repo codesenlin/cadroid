@@ -133,6 +133,7 @@
             android:exported="false" />
         <activity android:name=".SplashActivity"
             android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.SplashTask"
             android:configChanges="orientation|screenSize|smallestScreenSize|keyboard|keyboardHidden|screenLayout" />
 
         <!-- 优量汇的下载服务：SDK 自己声明的是 android:multiprocess="true"，

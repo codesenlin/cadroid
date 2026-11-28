@@ -9,7 +9,9 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.app.AppOpsManager
 import android.os.Build
+import android.os.Process
 import android.os.Environment
 import android.os.LocaleList
 import android.provider.MediaStore
@@ -44,8 +46,22 @@ object NativeCapabilities {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-    fun canDrawOverlays(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
+    fun canDrawOverlays(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        if (Settings.canDrawOverlays(context)) return true
+        // 部分 ROM 的 Settings.canDrawOverlays 与服务上下文组合会误报 false，
+        // AppOps 是系统实际拦截悬浮窗时使用的同一份授权状态。
+        return try {
+            val appOps = context.getSystemService(AppOpsManager::class.java)
+            appOps?.checkOpNoThrow(
+                AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                Process.myUid(),
+                context.packageName
+            ) == AppOpsManager.MODE_ALLOWED
+        } catch (t: Throwable) {
+            false
+        }
+    }
 
     /** 打开系统的悬浮窗权限页；极少数 OEM 没有该页面时回退到应用详情。 */
     fun overlayPermissionIntent(context: Context): Intent =

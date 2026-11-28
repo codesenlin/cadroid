@@ -13,7 +13,7 @@
     </plurals>
 
     <string name="landing_mode_float">Current mode: floating window\nYou can find the Command Assistant overlay on screen. If not, open the overlay permission manually.</string>
-    <string name="landing_mode_page">Current mode: page mode\nThe Command Assistant does not have overlay permission. Grant it and restart the app to use floating mode.</string>
+    <string name="landing_mode_page">Current mode: page mode\nYou can use the Command Assistant in this page. Granting overlay permission switches to floating mode automatically.</string>
     <string name="landing_check_overlay">Check overlay permission</string>
     <string name="landing_exit">Exit Command Assistant</string>
     <string name="landing_overlay_granted">Overlay permission is enabled</string>

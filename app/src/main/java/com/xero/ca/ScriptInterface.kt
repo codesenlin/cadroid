@@ -321,7 +321,11 @@ class ScriptInterface(manager: ScriptManager) {
 
     fun getSystemAccentColor(): Int = NativeCapabilities.systemAccentColor(mContext)
 
-    fun canDrawOverlays(): Boolean = NativeCapabilities.canDrawOverlays(mContext)
+    fun canDrawOverlays(): Boolean {
+        // 优先用前台 Activity 查询；部分 ROM 的 service context 会误报。
+        val activity = mBindActivity ?: mBindLandingActivity
+        return NativeCapabilities.canDrawOverlays(activity ?: mContext)
+    }
 
     fun isPerAppLanguageSupported(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -343,6 +347,11 @@ class ScriptInterface(manager: ScriptManager) {
     fun finishLanding() {
         mBindLandingActivity?.finish()
         mBindLandingActivity = null
+    }
+
+    /** 悬浮模式下主界面打开时把权限页退到后台，返回主界面时只剩悬浮球。 */
+    fun hideLanding() {
+        mBindLandingActivity?.moveTaskToBack(true)
     }
 
     fun showLanding() {
@@ -494,9 +503,12 @@ class ScriptInterface(manager: ScriptManager) {
             if (ScriptManager.hasInstance()) ScriptManager.getInstance().getScriptInterface() else null
 
         @JvmStatic
+        fun hasBridge(): Boolean = getInstance()?.mBridge != null
+
+        @JvmStatic
         fun callIntent(ctx: Context, intent: Intent) {
             val instance = getInstance()
-            if (instance != null) {
+            if (instance != null && instance.mBridge != null) {
                 Log.d("CA", "Pass intent to script: $intent")
                 instance.mBridge?.onNewIntent(intent)
             } else {
