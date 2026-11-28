@@ -4,7 +4,7 @@ agp = "9.5.3"
 kotlin = "2.4.21"
 
 # 运行时依赖
-androidx-activity-ktx = "1.13.0"
+androidx-activity-ktx = "1.10.1"
 androidx-annotation = "1.11.0"
 # 1.19.x 要求 minSdk 23；App 仍保持 minSdk 21，暂留 1.17.0
 androidx-core-ktx = "1.17.0"
@@ -14,7 +14,7 @@ desugar-jdk-libs = "2.1.5"
 gdt-union = "4.712.1582"
 gson = "2.15.0"
 java-websocket = "1.6.0"
-quickjs = "1.0.18"
+quickjs = "1.0.19"
 rhino = "1.9.2"
 zip4j = "2.11.6"
 
